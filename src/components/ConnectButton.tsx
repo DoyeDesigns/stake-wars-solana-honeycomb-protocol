@@ -123,7 +123,12 @@ const authenticateWithEdgeClient = async () => {
       });
 
       const result = await sendClientTransactions(client, wallet, txResponse);
-      toast.success("User & Profile Created!");
+
+      if (result[0].responses[0].status === 'Success') {
+          toast.success(`User & Profile Created! ${result[0].responses[0].signature}`);
+      } else {
+        throw new Error("transaction failed")
+      }
 
       const { user } = await client.findUsers({
       wallets: [`${wallet.publicKey?.toString()}`],
@@ -170,8 +175,12 @@ const authenticateWithEdgeClient = async () => {
       );
 
       const result = await sendClientTransactions(client, wallet, txResponse);
-      toast.success("Profile Created!");
-      setHasProfile(true)
+      if (result[0].responses[0].status === 'Success') {
+          setHasProfile(true)
+          toast.success(`Profile Created! ${result[0].responses[0].signature}`);
+      } else {
+        throw new Error("transaction failed")
+      }
     } catch (e) {
       toast.error(`Failed to create profile: ${e}`);
     } finally {
