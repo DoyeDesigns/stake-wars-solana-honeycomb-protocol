@@ -187,12 +187,13 @@ const authenticateWithEdgeClient = async () => {
     <div>
       {!wallet.connected ? (
   // 1. Connect Wallet
-  <Button
-    className={`text-white border border-white connect-button-bg min-h-[42px] font-semibold ${width} rounded-[7px]`}
-    onClick={() => wallet.connect()}
-  >
-    Connect Wallet
-  </Button>
+  // <Button
+  //   className={`text-white border border-white connect-button-bg min-h-[42px] font-semibold ${width} rounded-[7px]`}
+  //   onClick={() => wallet.connect()}
+  // >
+  //   Connect Wallet
+  // </Button>
+  <WalletMultiButton />
 ) : wallet.connected && !user ? (
   // 2. Create User
   <Button
