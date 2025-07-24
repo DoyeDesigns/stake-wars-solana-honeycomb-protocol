@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { client } from "@/utils/constants/client";
 import { characterAdressess } from "@/lib/charater-address";
@@ -66,7 +66,9 @@ export default function Lobby() {
         </h1>
       </div>
 
-      <CharacterCarousel characters={characterAbilities} />
+      <Suspense fallback={<div>Loading carousel...</div>}>
+        <CharacterCarousel characters={characterAbilities} />
+      </Suspense>
     </div>
   );
 }
