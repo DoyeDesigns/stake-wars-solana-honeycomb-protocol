@@ -77,7 +77,7 @@ export default function MintCharacter() {
   const findCharacters = async (): Promise<CharacterType[]> => {
     try {
       if (!wallet.publicKey) {
-        alert("Wallet not connected!");
+        toast.error("Wallet not connected!");
         return [];
       }
 
@@ -103,12 +103,12 @@ export default function MintCharacter() {
 
   try {
     if (!wallet.publicKey) {
-      alert("Wallet not connected!");
+      toast.error("Wallet not connected!");
       return;
     }
 
     if (!PROJECT_ADDRESS || !ASSEMBLER_CONFIG_ADDRESS) {
-      alert("Project or assembler config address not set!");
+      toast.error("Project or assembler config address not set!");
       return;
     }
 
