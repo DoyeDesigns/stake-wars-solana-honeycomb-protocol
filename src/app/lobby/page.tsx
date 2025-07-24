@@ -62,7 +62,7 @@ export default function Lobby() {
           className="size-[206px] hidden sm:block"
         />
         <h1 className="font-bold text-2xl -mt-4 mb-1">
-          You're now Combat Ready!
+          You&apos;re now Combat Ready!
         </h1>
       </div>
 
