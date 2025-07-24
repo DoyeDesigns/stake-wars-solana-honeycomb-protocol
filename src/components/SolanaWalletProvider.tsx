@@ -11,7 +11,6 @@ import {
 } from "@solana/wallet-adapter-wallets";
 import {
   WalletModalProvider,
-  WalletMultiButton,
 } from "@solana/wallet-adapter-react-ui";
 
 import "@solana/wallet-adapter-react-ui/styles.css";
@@ -32,7 +31,6 @@ export const SolanaWalletProvider = ({ children }: { children: React.ReactNode }
     <ConnectionProvider endpoint={endpoint}>
       <WalletProvider wallets={wallets} autoConnect>
         <WalletModalProvider>
-        <WalletMultiButton />
           {children}
         </WalletModalProvider>
       </WalletProvider>
