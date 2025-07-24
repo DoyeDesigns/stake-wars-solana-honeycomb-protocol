@@ -13,8 +13,6 @@ export default function PlayerHealth({
   const isPlayer1 = gameState?.player1.id === wallet.publicKey?.toString();
   const isPlayer2 = gameState?.player2.id === wallet.publicKey?.toString();
 
-  console.log(gameState)
-
   const currentPlayer = isPlayer1 
     ? gameState?.player1 
     : isPlayer2 
@@ -32,8 +30,6 @@ export default function PlayerHealth({
         )
       )
     : 0;
-
-    console.log("current player", currentPlayer)
 
   return (
     <div>

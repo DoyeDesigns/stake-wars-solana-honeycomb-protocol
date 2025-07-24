@@ -40,8 +40,7 @@ export default function ConnectButton({ width }: ConnectButtonProps) {
     });
 
     if (user.length > 0) {
-      setUser(user as unknown as User);
-      console.log("first", user)                                  
+      setUser(user as unknown as User);                        
     }
   };
 
@@ -63,7 +62,6 @@ useEffect(() => {
        if (!user.profiles || user.profiles.length === 0) {
       updateUser({ profiles: profile });
     }
-      console.log("Zustand user after profile update:", user);
       setHasProfile(profile.length > 0);
     } catch (err) {
       console.error("Error checking for profile:", err);
@@ -102,7 +100,7 @@ const authenticateWithEdgeClient = async () => {
 
   if (authConfirm.accessToken) {
     setAccessToken(authConfirm.accessToken);
-    console.log("Access token:", authConfirm.accessToken);
+    toast.success("Authentication successful");
   }
 };
 
@@ -135,7 +133,6 @@ const authenticateWithEdgeClient = async () => {
     if (user.length > 0) {
       setUser(user as unknown as User);                          
     }
-      console.log(result);
     } catch (e) {
       if (e instanceof Error) {
         toast.error("Failed to create user and profile");
@@ -175,7 +172,6 @@ const authenticateWithEdgeClient = async () => {
       const result = await sendClientTransactions(client, wallet, txResponse);
       toast.success("Profile Created!");
       setHasProfile(true)
-      console.log(result);
     } catch (e) {
       toast.error(`Failed to create profile: ${e}`);
     } finally {

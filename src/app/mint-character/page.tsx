@@ -62,7 +62,6 @@ export default function MintCharacter() {
         const matched = CHARACTERS.find((char) => char.id === characterId);
         if (matched) {
           setCharacterAbility(matched);
-          console.log(matched);
         }
       } catch (error) {
         console.error("Error matching character ability:", error);
@@ -153,8 +152,6 @@ export default function MintCharacter() {
 
       const characters = await findCharacters();
       setCharacterLengthAfterMint(characters.length);
-
-      console.log(characters)
 
       const lastCharacter = characters[characters.length - 1];
       setNewCharacter(lastCharacter);

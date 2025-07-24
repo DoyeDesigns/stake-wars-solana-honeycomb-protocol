@@ -56,7 +56,6 @@ const UserGameRooms = () => {
       setError(`Failed to join game room. ${err}`);
     } finally {
       router.push(`/game-play/${roomId}`);
-      close();
     }
   };
 
