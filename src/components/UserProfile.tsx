@@ -13,6 +13,7 @@ export default function UserProfile() {
   const { connection } = useConnection();
   const wallet = useWallet();
   const [balance, setBalance] = useState<number | null>(null);
+  const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
     const fetchBalance = async () => {
@@ -28,7 +29,7 @@ export default function UserProfile() {
 
   return (
     <div>
-      <Dialog>
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogTrigger className="mt-1">
           <Avatar className="size-[43px]">
             <AvatarImage src="/avater.png" alt="avater" />
@@ -70,7 +71,7 @@ export default function UserProfile() {
               </div>
             </div>
 
-            <ProfileTabs />
+            <ProfileTabs setIsOpen={setIsOpen} />
           </div>
         </DialogContent>
       </Dialog>

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { Dispatch, SetStateAction, useEffect, useState } from "react";
 import { GameRoomDocument } from "@/store/online-game-store";
 import useOnlineGameStore from "@/store/online-game-store";
 import { useRouter } from "next/navigation";
@@ -13,7 +13,11 @@ import { compactHash } from "./ConnectButton";
 import { MoonLoader } from "react-spinners";
 import { useWallet } from "@solana/wallet-adapter-react";
 
-const UserGameRooms = () => {
+interface GameRoomSearchProps {
+  setIsOpen: Dispatch<SetStateAction<boolean>>;
+}
+
+const UserGameRooms = ({setIsOpen} : GameRoomSearchProps) => {
   const [gameRooms, setGameRooms] = useState<GameRoomDocument[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -56,6 +60,7 @@ const UserGameRooms = () => {
       setError(`Failed to join game room. ${err}`);
     } finally {
       router.push(`/game-play/${roomId}`);
+      setIsOpen(false)
     }
   };
 

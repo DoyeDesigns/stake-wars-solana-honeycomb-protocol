@@ -1,8 +1,13 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import PlayerStatistics from "./PlayerStatistics";
 import UserGameRooms from "./UserRooms";
+import { Dispatch, SetStateAction } from "react";
 
-export default function ProfileTabs() {
+interface GameRoomSearchProps {
+  setIsOpen: Dispatch<SetStateAction<boolean>>;
+}
+
+export default function ProfileTabs({setIsOpen} : GameRoomSearchProps) {
   return (
       <Tabs defaultValue="active-rooms" className="">
         <TabsList className="border border-[#A78ACE] h-[47px] rounded-[10px] w-full">
@@ -10,7 +15,7 @@ export default function ProfileTabs() {
             <TabsTrigger className="cursor-pointer" value="battle-history">Battle History</TabsTrigger>
         </TabsList>
         <TabsContent value="active-rooms">
-            <UserGameRooms />
+            <UserGameRooms setIsOpen={setIsOpen}/>
         </TabsContent>
         <TabsContent value="battle-history">
             <PlayerStatistics />

@@ -13,9 +13,7 @@ import useOnlineGameStore from '@/store/online-game-store';
 import { usePathname } from 'next/navigation';
 
 const CHAKRA_RESOURCE_TREE_ADDRESS = process.env.CHAKRA_RESOURCE_TREE_ADDRESS as string
-const ASSEMBLER_CONFIG_ADDRESS = process.env.ASSEMBLER_CONFIG_ADDRESS as string
-const PROJECT_ADDRESS = process.env.PROJECT_ADDRESS as string
-const CHARACTER_MODEL_ADDRESS = process.env.CHARACTER_MODEL_ADDRESS as string
+const PROJECT_AUTHORITY = process.env.PROJECT_AUTHORITY as string
 const CHAKRA_RESOURCE_ADDRESS = process.env.CHAKRA_RESOURCE_ADDRESS as string
 
 export default function Marketplace() {
@@ -57,7 +55,7 @@ export default function Marketplace() {
     }
 
     const purchasePowerUp = async (powerUp: { name: string; effect: number; remainingTurns: number; price: number; village: string; }) => {
-        if (!wallet.publicKey || !PROJECT_ADDRESS || !ASSEMBLER_CONFIG_ADDRESS || !CHARACTER_MODEL_ADDRESS) {
+        if (!wallet.publicKey || !PROJECT_AUTHORITY || !CHAKRA_RESOURCE_ADDRESS) {
           alert("Missing required data");
           return;
         }
@@ -65,7 +63,7 @@ export default function Marketplace() {
         const {
         createBurnResourceTransaction: txResponse 
       } = await client.createBurnResourceTransaction({
-          authority: wallet.publicKey.toString(),
+          authority: PROJECT_AUTHORITY,
           resource: CHAKRA_RESOURCE_ADDRESS,
           amount: powerUp.price.toString(),
           // payer: adminPublicKey.toString(),
@@ -125,7 +123,7 @@ export default function Marketplace() {
                   <p className='text-sm text-white mb-5'>Increases attack power by {powerup.effect} for your next {powerup.remainingTurns} attack plays during a match</p>
                   </div>
 
-                  <Button disabled={(chakraBalance ?? 0) < powerup.price} onClick={() => purchasePowerUp(powerup)} className='flex cursor-pointer w-full bg-[#2F2B24] items-center border-[0.6px] rounded-lg border-[#FFFFFF] gap-2'><img src="/chakra_coin.svg" alt="chakra" width={20} height={20} />{powerup.price} CHK</Button>
+                  <Button disabled={(chakraBalance as number ?? 0) < powerup.price} onClick={() => purchasePowerUp(powerup)} className='flex cursor-pointer w-full bg-[#2F2B24] items-center border-[0.6px] rounded-lg border-[#FFFFFF] gap-2'><img src="/chakra_coin.svg" alt="chakra" width={20} height={20} />{powerup.price} CHK</Button>
                 </div>
               ))}
             </TabsContent>

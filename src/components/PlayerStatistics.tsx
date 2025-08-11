@@ -1,18 +1,17 @@
 import React, { useEffect, useState } from "react";
 import useOnlineGameStore from "@/store/online-game-store";
 import { GameRoomDocument } from "@/store/online-game-store";
-import { useAppKitAccount } from "@reown/appkit/react";
 import { toast } from 'react-toastify';
 import { Button } from "./ui/button";
 import { MoonLoader } from "react-spinners";
+import { useWallet } from "@solana/wallet-adapter-react";
 
 
 export default function PlayerStatistics() {
   const { findUserRooms } = useOnlineGameStore();
   const [joinedRooms, setJoinedRooms] = useState<GameRoomDocument[]>([]);
+  const wallet = useWallet();
   const [loading, setLoading] = useState<boolean>(false);
-
-  const {address} = useAppKitAccount();
 
   const compactHash = (hash: string) => {
     return hash.slice(0, 7) + '...' + hash.slice(-5)
@@ -49,7 +48,7 @@ export default function PlayerStatistics() {
   const fetchJoinedRooms = async () => {
     setLoading(true);
     try {
-      const rooms = await findUserRooms(address as string);
+      const rooms = await findUserRooms(wallet.publicKey?.toString() as string);
       
       const finishedRooms = (rooms || [])
         .filter(room => room.status === 'finished')
@@ -63,6 +62,7 @@ export default function PlayerStatistics() {
     } catch (error) {
       if (error instanceof Error) {
         toast.error(`Error fetching joined rooms: ${error.message}`)
+        console.log(error)
       }
     } finally {
       setLoading(false);
@@ -77,7 +77,7 @@ export default function PlayerStatistics() {
 
   useEffect(() => {
     fetchJoinedRooms();
-  }, [address]);
+  }, [wallet.connected]);
 
   return (
     <div>
@@ -88,14 +88,14 @@ export default function PlayerStatistics() {
       ) : (
         <div>
             <div className="flex gap-10 justify-center items-center pt-7 pb-6">
-        <div className="flex flex-col">
+        {/* <div className="flex flex-col">
           <h1 className="font-bold text-[16px] text-white mb-2">
-          <span className="flex gap-2">{statistics.totalEarnings.toLocaleString()} <span className="text-[#BFE528]">gMON</span></span>
+          <span className="flex gap-2">{statistics.totalEarnings.toLocaleString()} <span className="text-[#BFE528]">CHK</span></span>
           </h1>
           <span className="font-normal text-[15px] text-[#BFE528]">
             Total Earned
           </span>
-        </div>
+        </div> */}
         <div className="flex flex-col">
           <span className="font-bold text-[16px] text-white mb-2 block">{statistics.totalBattles}</span>
           <span className="font-normal text-[15px] text-white block">
@@ -121,16 +121,16 @@ export default function PlayerStatistics() {
             <div key={room.id} className="bg-[#393939] h-[75px] rounded-[10px] flex justify-between items-center w-[364px] min-w-[250px] pr-[18px] pl-8 mx-2">
             <div className="flex gap-3 items-center">
               <img
-                src={didUserWin(room, address) ? "/history-won-img.png" : "/history-lost-img.png"}
-                alt={didUserWin(room, address) ? "history-won-img.png" : "history-lost-img.png"}
+                src={didUserWin(room, wallet.publicKey?.toString()) ? "/history-won-img.png" : "/history-lost-img.png"}
+                alt={didUserWin(room, wallet.publicKey?.toString()) ? "history-won-img.png" : "history-lost-img.png"}
                 width={39}
                 height={39}
               />
               <div>
-                <h3 className="font-semibold text-[18px] text-white">{didUserWin(room, address) ? 'Won' : 'Lost'}</h3>
+                <h3 className="font-semibold text-[18px] text-white">{didUserWin(room, wallet.publicKey?.toString()) ? 'Won' : 'Lost'}</h3>
                 <span className="text-white text-[13px]">
                   vs <span className="text-secondary uppercase !w-[150px] truncate ... overflow-hidden"> {compactHash(Object.values(room.players)
-                          .find(player => player.wallet !== address)
+                          .find(player => player.wallet !== wallet.publicKey?.toString())
                           ?.wallet as string || '') || 'Unknown'}</span>
                 </span>
               </div>
