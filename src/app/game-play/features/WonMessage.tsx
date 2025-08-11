@@ -9,6 +9,7 @@ import { client } from "@/utils/constants/client";
 import { useWallet } from "@solana/wallet-adapter-react";
 
 const CHAKRA_RESOURCE_ADDRESS = process.env.CHAKRA_RESOURCE_ADDRESS as string
+const PROJECT_AUTHORITY = process.env.PROJECT_AUTHORITY as string
 
 export default function WonMessage() {
   const router = useRouter();
@@ -26,7 +27,7 @@ export default function WonMessage() {
        } = await client.createMintResourceTransaction({
            resource: CHAKRA_RESOURCE_ADDRESS, // Resource public key as a string
            amount: "500",
-           authority: wallet.publicKey.toString(), 
+           authority: PROJECT_AUTHORITY, 
            owner: wallet.publicKey.toString(), 
            // payer: adminPublicKey.toString(), 
        });

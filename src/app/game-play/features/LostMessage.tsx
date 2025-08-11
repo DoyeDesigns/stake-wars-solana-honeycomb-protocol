@@ -29,7 +29,7 @@ export default function LostMessage() {
              amount: "200",
              authority: PROJECT_AUTHORITY, 
              owner: wallet.publicKey.toString(), 
-             // payer: adminPublicKey.toString(), 
+             payer: PROJECT_AUTHORITY, 
          });
          
            const response = await sendClientTransactions(client, wallet, txResponse);

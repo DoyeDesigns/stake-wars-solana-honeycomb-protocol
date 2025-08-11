@@ -109,7 +109,7 @@ interface OnlineGameStore {
   rollAndRecordDice: () => Promise<number>;
   checkDiceRollsAndSetTurn: () => void;
   selectCharacters: (roomId: string, character: Character, playerAddress: string) => void;
-  performAttack: (attackingPlayer: 'player1' | 'player2', ability: Ability) => void;
+  performAttack: (attackingPlayer: 'player1' | 'player2', ability: Ability, powerUp: boolean) => void;
   useDefense: (
     defendingPlayer: 'player1' | 'player2',
     defenseAbility: Ability,
@@ -359,21 +359,39 @@ checkDiceRollsAndSetTurn: async () => {
       return true;
   },
   
-  performAttack: async (attackingPlayer, ability) => {
+  performAttack: async (attackingPlayer, ability, powerUp) => {
     const { roomId } = get();
+    const { gameState } = get();
     if (!roomId) throw new Error('No active game room');
   
     const opponentKey = attackingPlayer === 'player1' ? 'player2' : 'player1';
     const roomRef = doc(db, 'gameRooms', roomId);
-  
-  
-    updateDoc(roomRef, {
+
+    if (powerUp) {
+      const updatedBuffs = (gameState[attackingPlayer].activeBuffs ?? [])
+        .map((buff) => ({
+          ...buff,
+          remainingTurns: buff.remainingTurns - 1,
+        }))
+        .filter((buff) => buff.remainingTurns > 0);
+
+      updateDoc(roomRef, {
+      'gameState.currentTurn': opponentKey,
+      'gameState.lastAttack': { 
+        ability, 
+        attackingPlayer 
+      },
+      [`gameState.${attackingPlayer}.activeBuffs`]: updatedBuffs,
+    });
+    } else {
+      updateDoc(roomRef, {
       'gameState.currentTurn': opponentKey,
       'gameState.lastAttack': { 
         ability, 
         attackingPlayer 
       }
     });
+    }
   },
 
   createOnlineGameRoom: async (playerAddress) => {

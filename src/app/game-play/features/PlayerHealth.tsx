@@ -33,7 +33,7 @@ export default function PlayerHealth({
 
   return (
     <div>
-      <div className="bg-[#3F3F3F] bg-cover h-[129px] lg:h-[267px] rounded-[5px] lg:rounded-[10px] flex justify-between gap-8 items-center px-6 w-full overflow-auto">
+      <div className="bg-[#3F3F3F] bg-cover min-h-[129px] lg:h-[267px] rounded-[5px] lg:rounded-[10px] flex justify-between gap-8 items-center px-6 w-full overflow-auto">
       <div
         className={`flex flex-col rounded-[6px] relative justify-end items-center w-[63px] lg:w-[132px] h-[97px] lg:h-[195px] p-4 overflow-hidden outline-1 outline-[#E8E8E8] outline-offset-[6px] shadow-[0px_4px_7.2px_3px_rgba(191,229,40,0.39)]`}
       >
@@ -54,12 +54,12 @@ export default function PlayerHealth({
           userId={currentPlayer?.id as string}
         />
 
-        {currentPlayer?.activeBuffs?.length && (
+        {currentPlayer?.activeBuffs?.length as number > 0 && (
           <div>
             <span className="text-[#BFE528] text-xs my-3">Active power up</span>
-            <div className=" flex items-center flex-wrap gap-2">
-              {currentPlayer.activeBuffs.map((powerup, index) => (
-              <div key={index} className="border-[0.7px] text-white text-xs border-white bg-[#BFE52833] rounded-lg w-fit">
+            <div className=" flex items-center flex-wrap gap-2 my-2">
+              {currentPlayer?.activeBuffs?.map((powerup, index) => (
+              <div key={index} className="border-[0.7px] py-1 px-3 text-white text-xs border-white bg-[#BFE52833] rounded-lg w-fit">
                 {powerup.name}(+{powerup.effect}): {powerup.remainingTurns} 
               </div>
             ))}

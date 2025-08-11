@@ -64,11 +64,6 @@ export default function Gameplay({roomId} : {roomId: string}) {
     if (gameState.winner === 'player1' || gameState.winner === 'player2' && gameState.gameStatus === 'finished') {
       toast.info(`${gameState.winner} has won the game`);
       if (wallet.publicKey?.toString() === gameState[gameState?.winner]?.id) {
-        // const assignWinnerHash = autoAssignWinner(roomId, address);
-        // if (assignWinnerHash) {
-        //   toast.success(`Transaction Successful! hash: ${assignWinnerHash}`);
-        // }
-        // claimPot();
         setShowWinner(true);
       } else {
         setShowLoser(true);
@@ -81,7 +76,7 @@ export default function Gameplay({roomId} : {roomId: string}) {
     if (
       gameState.gameStatus === 'inProgress' &&
        gameState.lastAttack !== null &&
-      // gameState.lastAttack?.ability?.type === 'attack' &&
+      gameState.lastAttack?.ability?.type === 'attack' &&
       gameState.lastAttack?.attackingPlayer
     ) {
 

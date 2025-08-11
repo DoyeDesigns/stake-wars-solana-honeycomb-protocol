@@ -67,26 +67,13 @@ const DiceRoll: React.FC = () => {
               value: (ability?.value ?? 0) + totalExtraDamage,
             };
 
-            performAttack(currentPlayer, newAbility);
-
-              const updatedBuffs = gameState[currentPlayer].activeBuffs
-                .map((buff) => ({
-                  ...buff,
-                  remainingTurns: buff.remainingTurns - 1,
-                }))
-                .filter((buff) => buff.remainingTurns > 0);
-
-              const updateData: UpdateData = {
-                [`gameState.${currentPlayer}.activeBuffs`]: updatedBuffs,
-              };
-
-              await updateDoc(doc(db, "gameRooms", roomId as string), updateData);
+              performAttack(currentPlayer, newAbility, true);
 
               toast.info(
                 `${currentPlayer} used buffs to add ${totalExtraDamage} extra damage!`
               );
             } else {
-              performAttack(currentPlayer, ability)
+              performAttack(currentPlayer, ability, false)
             }
           }
         }

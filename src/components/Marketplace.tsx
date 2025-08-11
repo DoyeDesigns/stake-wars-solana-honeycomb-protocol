@@ -40,7 +40,7 @@ export default function Marketplace() {
       if (wallet.connected) {
         fetchResourcesBalance();
       }
-    }, [wallet.connected, wallet.sendTransaction, wallet.sendTransaction]);
+    }, [wallet.connected]);
 
     const fetchResourcesBalance = async () => {
       if (!wallet.connected) {
