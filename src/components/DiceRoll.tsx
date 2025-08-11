@@ -1,18 +1,15 @@
 "use client";
 import React, { useState } from "react";
-import useOnlineGameStore, { UpdateData } from "@/store/online-game-store";
+import useOnlineGameStore from "@/store/online-game-store";
 import { toast } from "react-toastify";
 import { Button } from "./ui/button";
 import { useWallet } from "@solana/wallet-adapter-react";
-import { doc, updateDoc } from 'firebase/firestore';
-import { db } from '@/config/firebase';
 
 const DiceRoll: React.FC = () => {
   const {
     rollAndRecordDice,
     gameState,
     performAttack,
-    roomId,
     addDefenseToInventory,
   } = useOnlineGameStore();
   const [rollNumber, setRollNumber] = useState(0);
