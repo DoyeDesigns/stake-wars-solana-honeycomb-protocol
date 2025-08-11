@@ -9,6 +9,7 @@ import useOnlineGameStore from "@/store/online-game-store";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { toast } from "react-toastify";
 import { useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 const CARD_WIDTH = 155;
 const CARD_OFFSET = 60;
@@ -27,6 +28,7 @@ export default function CharacterCarousel({ characters }: CharacterCarouselProps
   const { createOnlineGameRoom, joinGameRoom, selectCharacters } = useOnlineGameStore();
   const [roomToJoinId, setRoomToJoinId] = useState<string | null>(null);
   const searchParams = useSearchParams();
+  const router = useRouter();
 
   useEffect(() => {
   const gid = searchParams.get("gid");
@@ -82,6 +84,8 @@ export default function CharacterCarousel({ characters }: CharacterCarouselProps
 
       selectCharacters(roomToJoinId, activeCharacter, wallet.publicKey?.toString() as string);
       await joinGameRoom(roomToJoinId, wallet.publicKey?.toString() as string);
+
+      router.push(`/game-play/${roomToJoinId}`)
 
       toast.success("Game room joined successfully!");
     } catch (error) {
