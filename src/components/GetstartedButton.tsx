@@ -12,7 +12,7 @@ export default function GetstartedButton() {
   return (
     <div>
       <Button
-      onClick={() => router.push('/mint-character')}
+      onClick={() => router.push('/lobby')}
         disabled={user?.profiles ? false : true}
         className={`text-white border border-white ${
           user?.profiles ? "connect-button-bg" : "bg-[#28252D]"

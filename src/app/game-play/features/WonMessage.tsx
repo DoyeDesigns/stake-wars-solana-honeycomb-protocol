@@ -4,15 +4,42 @@ import React from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { toast } from "react-toastify";
+import { sendClientTransactions } from "@honeycomb-protocol/edge-client/client/walletHelpers";
+import { client } from "@/utils/constants/client";
+import { useWallet } from "@solana/wallet-adapter-react";
+
+const CHAKRA_RESOURCE_ADDRESS = process.env.CHAKRA_RESOURCE_ADDRESS as string
 
 export default function WonMessage() {
   const router = useRouter();
+  const wallet = useWallet();
 
-  async function claimPot() {
+  async function claimXP() {
       try {
+         if (!wallet.publicKey || !CHAKRA_RESOURCE_ADDRESS) {
+           alert("Missing required data");
+           return;
+         }
        
+         const { 
+         createMintResourceTransaction: txResponse 
+       } = await client.createMintResourceTransaction({
+           resource: CHAKRA_RESOURCE_ADDRESS, // Resource public key as a string
+           amount: "500",
+           authority: wallet.publicKey.toString(), 
+           owner: wallet.publicKey.toString(), 
+           // payer: adminPublicKey.toString(), 
+       });
+       
+         const response = await sendClientTransactions(client, wallet, txResponse);
+         if (response[0].responses[0].status === "Success") {
+           toast.success(`Successfully claimed:, ${response}`);
+           router.push("/lobby");
+         } else {
+           throw new Error("transaction failed");
+         }
       } catch (error) {
-        toast.error(`Error joining pot: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        toast.error(`Error Claiming XP: ${error instanceof Error ? error.message : 'Unknown error'}`);
         return;
       } 
     }
@@ -51,10 +78,10 @@ export default function WonMessage() {
               Exit Game
             </Button>
             <Button
-              onClick={() => claimPot()}
+              onClick={() => claimXP()}
               className="border-none connect-button-bg text-white bg-[#B91770] hover:bg-[#B91770]/80 cursor-pointer font-bold text-[12px] w-[190px] h-[38px] rounded-[4px]"
             >
-              Claim Pot
+              Claim 500 XP
             </Button>
           </div>
         </div>

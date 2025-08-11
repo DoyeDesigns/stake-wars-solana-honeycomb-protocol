@@ -1,5 +1,6 @@
 import { create } from "zustand";
-import { User } from "@/lib/types/user";
+// import { User } from "@/lib/types/user";
+import { User } from "@honeycomb-protocol/edge-client";
 
 type UserStore = {
   user: User | null;

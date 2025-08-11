@@ -54,6 +54,19 @@ export default function PlayerHealth({
           userId={currentPlayer?.id as string}
         />
 
+        {currentPlayer?.activeBuffs?.length && (
+          <div>
+            <span className="text-[#BFE528] text-xs my-3">Active power up</span>
+            <div className=" flex items-center flex-wrap gap-2">
+              {currentPlayer.activeBuffs.map((powerup, index) => (
+              <div key={index} className="border-[0.7px] text-white text-xs border-white bg-[#BFE52833] rounded-lg w-fit">
+                {powerup.name}(+{powerup.effect}): {powerup.remainingTurns} 
+              </div>
+            ))}
+            </div>
+          </div>
+        )}
+
         <div className="space-y-[7px] flex-col hidden lg:block">
         <div className="flex justify-between items-center">
           <span className="text-[15px] font-bold">

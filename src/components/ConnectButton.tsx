@@ -3,7 +3,8 @@
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useEffect, useState } from "react";
 import { client } from "@/utils/constants/client";
-import { User } from "@/lib/types/user";
+// import { User } from "@/lib/types/user";
+import { User } from "@honeycomb-protocol/edge-client";
 import { sendClientTransactions } from "@honeycomb-protocol/edge-client/client/walletHelpers";
 import { toast } from "react-toastify";
 import { Button } from "./ui/button";
@@ -26,7 +27,6 @@ export default function ConnectButton({ width }: ConnectButtonProps) {
   const wallet = useWallet();
   const { user, setUser, updateUser } = useUserStore();
 
-  // const [user, setUser] = useState<User | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [hasProfile, setHasProfile] = useState<boolean>(false);
   const [loading, setLoading] = useState(false);
@@ -64,7 +64,7 @@ useEffect(() => {
     }
       setHasProfile(profile.length > 0);
     } catch (err) {
-      console.error("Error checking for profile:", err);
+      toast.error(`Error checking for profile ${err}`);
     }
   };
 

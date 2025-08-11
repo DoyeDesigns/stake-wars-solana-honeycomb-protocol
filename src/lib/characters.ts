@@ -11,6 +11,7 @@ export type Village = "Hidden Leaf"| "Hidden Sand" | "Hidden Mist" | "Hidden Clo
 
 export interface Character {
   id: string;
+  address?: string;
   nickname: string;
   village: Village;
   specialty: string;

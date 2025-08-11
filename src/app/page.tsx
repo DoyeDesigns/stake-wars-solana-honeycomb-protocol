@@ -13,7 +13,7 @@ export default function Home() {
         <p className="font-light text-lg">Connect your wallet to access a whole new universe</p>
       </div>
 
-      <div className='flex flex-col gap-4.5 justify-center items-center mt-10 pb-10'>
+      <div className='flex flex-col gap-4.5 justify-center items-center mt-10 pb-20'>
         <ConnectButton width="w-[200px]" />
         <GetstartedButton />
       </div>

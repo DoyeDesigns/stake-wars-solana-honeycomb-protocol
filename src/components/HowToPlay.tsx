@@ -1,7 +1,6 @@
 'use client'
 
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
-import { DialogTitle } from "@radix-ui/react-dialog";
+import { Dialog, DialogContent, DialogTrigger, DialogTitle } from "@/components/ui/dialog";
 import { useState } from "react";
 import { Button } from "./ui/button";
 
@@ -63,51 +62,70 @@ export default function HowToPlay() {
 
   return (
     <div className="fixed bottom-5 right-5 lg:right-9">
-        <Dialog>
-      <DialogTrigger className="connect-button-bg h-11 px-5 rounded-3xl items-center cursor-pointer">
-        <div className="flex gap-2 items-center">
-          <img src="/info.png" alt="info" className='size-4' />
-          <span className={`underline font-bold text-[11px]`}>How to play StakeWars</span>
-        </div>
-      </DialogTrigger>
-      <DialogContent className="overflow-auto bg-linear-to-bl from-violet-500 to-fuchsia-500">
-        <DialogTitle className="hidden">Search Game Room</DialogTitle>
+      <Dialog>
+        <DialogTrigger className="connect-button-bg h-11 px-5 rounded-3xl items-center cursor-pointer">
+          <div className="flex gap-2 items-center">
+            <img src="/info.png" alt="info" className="size-4" />
+            <span className={`underline font-bold text-[11px]`}>
+              How to play StakeWars
+            </span>
+          </div>
+        </DialogTrigger>
+        <DialogContent className="overflow-auto bg-linear-to-bl from-violet-500 to-fuchsia-500">
+          <DialogTitle className="hidden">Search Game Room</DialogTitle>
           <div className="h-[1px] bg-white my-[22px]"></div>
 
-            <div className="flex-1 overflow-y-auto">
-              {pages[currentPage].content}
+          <div className="flex-1 overflow-y-auto">
+            {pages[currentPage].content}
+          </div>
+
+          <div className="h-[1px] bg-white my-[22px]"></div>
+
+          <div className=" flex justify-between items-center pb-3">
+            <Button
+              className={`p-2 bg-transparent ${
+                currentPage === 0 ? "invisible" : ""
+              }`}
+              onClick={() => setCurrentPage((prev) => Math.max(0, prev - 1))}
+            >
+              <img
+                src="/arrow-back.png"
+                alt="Previous"
+                width={24}
+                height={24}
+              />
+            </Button>
+
+            <div className="flex gap-2 justify-center">
+              {pages.map((_, index) => (
+                <div
+                  key={index}
+                  className={`w-2 h-2 rounded-full ${
+                    index === currentPage ? "bg-[#6832AE]" : "bg-white"
+                  }`}
+                />
+              ))}
             </div>
 
-            <div className="h-[1px] bg-white my-[22px]"></div>
-
-            <div className=" flex justify-between items-center pb-3">
-              <Button
-                className={`p-2 bg-transparent ${currentPage === 0 ? 'invisible' : ''}`}
-                onClick={() => setCurrentPage(prev => Math.max(0, prev - 1))}
-              >
-                <img src="/arrow-back.png" alt="Previous" width={24} height={24} />
-              </Button>
-
-              <div className="flex gap-2 justify-center">
-                {pages.map((_, index) => (
-                  <div
-                    key={index}
-                    className={`w-2 h-2 rounded-full ${
-                      index === currentPage ? 'bg-[#6832AE]' : 'bg-white'
-                    }`}
-                  />
-                ))}
-              </div>
-
-              <Button
-                className={`p-2 bg-transparent ${currentPage === pages.length - 1 ? 'invisible' : ''}`}
-                onClick={() => setCurrentPage(prev => Math.min(pages.length - 1, prev + 1))}
-              >
-                <img src="/arrow-back.png" className='rotate-180' alt="Next" width={24} height={24} />
-              </Button>
-            </div>
-      </DialogContent>
-    </Dialog>
+            <Button
+              className={`p-2 bg-transparent ${
+                currentPage === pages.length - 1 ? "invisible" : ""
+              }`}
+              onClick={() =>
+                setCurrentPage((prev) => Math.min(pages.length - 1, prev + 1))
+              }
+            >
+              <img
+                src="/arrow-back.png"
+                className="rotate-180"
+                alt="Next"
+                width={24}
+                height={24}
+              />
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -53,15 +53,15 @@ export default function CharacterCarousel({ characters }: CharacterCarouselProps
 
       // setCreatedGameRoom(roomId)
 
-      selectCharacters(roomId, activeCharacter, wallet.publicKey?.toString() as string);
+      selectCharacters(roomId, activeCharacter, wallet.publicKey?.toString() as string, );
       await joinGameRoom(roomId, wallet.publicKey?.toString() as string);
 
       toast.success("Game room created and joined successfully!");
     } catch (error) {
       if (error instanceof Error) {
-    console.error("Caught error:", error.message);
+    toast.error(`Caught error ${error.message}`);
   } else {
-    console.error("Unknown error:", error);
+    toast.error(`Caught error ${error}`);
   }
     } finally {
       setIsCreating(false);
@@ -86,9 +86,9 @@ export default function CharacterCarousel({ characters }: CharacterCarouselProps
       toast.success("Game room joined successfully!");
     } catch (error) {
       if (error instanceof Error) {
-    console.error("Caught error:", error.message || "Something went wrong while joining the game.");
+    toast.error(`Caught error ${error.message}` || "Something went wrong while joining the game.");
   } else {
-    console.error("Unknown error:", error);
+    toast.error(`"Unknown error ${error}`);
   }
     } finally {
       setIsCreating(false);
@@ -133,7 +133,7 @@ export default function CharacterCarousel({ characters }: CharacterCarouselProps
             if (Math.abs(distance) > MAX_VISIBILITY) return null;
 
             return (
-              <div key={character.id} className="border-4 border-black rounded-md overflow-hidden">
+              <div key={i} className="border-4 border-black rounded-md overflow-hidden">
                 <motion.div
                   className={`absolute top-0 left-1/2 transform -translate-x-1/2 rounded-xl ${
                     isActive ? "z-30" : "z-20"
@@ -165,7 +165,7 @@ export default function CharacterCarousel({ characters }: CharacterCarouselProps
         </div>
       </div>
 
-      <div className="flex justify-center gap-3 pb-10">
+      <div className="flex flex-wrap justify-center gap-3 pb-10">
         <Button
           className="bg-black text-white h-10.2 w-50 border border-[#6B6969] rounded-lg"
           onClick={() => toast.info("Mission started")}
@@ -178,7 +178,7 @@ export default function CharacterCarousel({ characters }: CharacterCarouselProps
           onClick={joinGame}
           disabled={isJoining}
         >
-          {isCreating ? "Creating..." : "Create a game"}
+          {isCreating ? "Joining..." : "Join game"}
         </Button>) : (<Button
           className="connect-button-bg h-10.2 w-[140px] border border-[#FFFFFF] rounded-lg"
           onClick={createGame}

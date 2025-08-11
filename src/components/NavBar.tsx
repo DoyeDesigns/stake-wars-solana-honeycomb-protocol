@@ -8,6 +8,7 @@ import UserProfile from './UserProfile'
 import SearchDialog from './SearchDialog'
 import { useWallet } from '@solana/wallet-adapter-react'
 import useOnlineGameStore from '@/store/online-game-store'
+import Missions from './Missions'
 
 
 export default function NavBar() {
@@ -27,6 +28,9 @@ export default function NavBar() {
         </div>
         
         <div className='flex items-center gap-3 lg:gap-7 '>
+          <div className={`${wallet.connected ? 'block' : 'hidden'}`}>
+            <Missions />
+          </div>
           <div className='sm:hidden'>
             <SearchDialog />
           </div>

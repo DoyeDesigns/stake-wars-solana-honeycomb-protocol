@@ -16,7 +16,13 @@ import { Character, Ability } from '@/lib/characters';
 import { toast } from 'react-toastify';
 import { Timestamp } from 'firebase/firestore';
 
-type UpdateData = {
+export interface Buff {
+  name: string;
+  effect: number; 
+  remainingTurns: number;
+}
+
+export type UpdateData = {
   [key: string]: number | string | null | object;
 };
 
@@ -49,6 +55,7 @@ interface GameState {
     character?: Character;
     currentHealth: number;
     defenseInventory: DefenseInventory;
+    activeBuffs?: Buff[];
     skippedDefense?: {
       ability: Ability;
       damage: number;
@@ -59,6 +66,7 @@ interface GameState {
     character?: Character;
     currentHealth: number;
     defenseInventory: DefenseInventory;
+    activeBuffs?: Buff[];
     skippedDefense?: {
       ability: Ability;
       damage: number;
@@ -114,6 +122,7 @@ interface OnlineGameStore {
     ability: Ability
   ) => void;
   // getStakeDetails: (roomId: string) => Promise<StakeDetails | undefined>;
+  addBuffToPlayer: (player: 'player1' | 'player2', name: string, effect: number, duration: number) => void;
   createOnlineGameRoom: (playerAddress: string) => Promise<string>;
   joinGameRoom: (roomId: string, playerAddress: string | null) => Promise<void>;
   findUserRooms: (playerAddress: string) => Promise<GameRoomDocument[] | null>;
@@ -244,6 +253,24 @@ checkDiceRollsAndSetTurn: async () => {
       'gameState.currentTurn': nextPlayer,
     });
   },
+
+  addBuffToPlayer: async (player: 'player1' | 'player2', name: string, effect: number, duration: number) => {
+  const { roomId, gameState } = get();
+  if (!roomId) throw new Error('No active game room');
+
+  const roomRef = doc(db, 'gameRooms', roomId);
+  const currentBuffs = gameState[player]?.activeBuffs || [];
+
+  const newBuff: Buff = {
+    name,
+    effect,
+    remainingTurns: duration,
+  };
+
+  await updateDoc(roomRef, {
+    [`gameState.${player}.activeBuffs`]: [...currentBuffs, newBuff],
+  });
+},
 
   
   skipDefense: async (defendingPlayer, incomingDamage, ability) => {

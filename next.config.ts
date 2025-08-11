@@ -14,6 +14,8 @@ const nextConfig: NextConfig = {
     ASSEMBLER_CONFIG_ADDRESS: process.env.ASSEMBLER_CONFIG_ADDRESS,
     CHARACTER_MODEL_ADDRESS: process.env.CHARACTER_MODEL_ADDRESS,
     CHARACTER_MODEL_TREE_ADDRESS: process.env.CHARACTER_MODEL_TREE_ADDRESS,
+    CHAKRA_RESOURCE_ADDRESS: process.env.CHAKRA_RESOURCE_ADDRESS,
+    CHAKRA_RESOURCE_TREE_ADDRESS: process.env.CHAKRA_RESOURCE_TREE_ADDRESS,
   },
   webpack: config => {
     config.externals.push('pino-pretty', 'lokijs', 'encoding')

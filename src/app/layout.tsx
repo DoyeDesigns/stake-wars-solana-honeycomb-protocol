@@ -5,6 +5,7 @@ import { SolanaWalletProvider } from "@/components/SolanaWalletProvider";
 import { ToastContainer } from 'react-toastify';
 import NavBar from "@/components/NavBar";
 import Footer from "@/components/Footer";
+import Marketplace from "@/components/Marketplace";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -53,6 +54,7 @@ export default function RootLayout({
             <div className="min-h-screen bg-[url('/bg-gradient.png')] bg-cover bg-center">
               <NavBar />
               {children}
+              <Marketplace />
               <Footer />
             </div>
           </div>
