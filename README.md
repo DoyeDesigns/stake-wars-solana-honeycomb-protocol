@@ -132,7 +132,7 @@ Every XP gain, level-up, and gold reward is **tracked on-chain**:
 
 ## 🎮 Game Design Development  
 
-**Watch the gameplay walkthrough here:**  
+**Go through the GDD here:**  
 [Game design development](https://docs.google.com/document/d/1vs_uJkjgt7fe2yu2yWIYwhJbeCHyxg6EuATC_Os5GV0/edit?usp=sharing)  
 
 ---
