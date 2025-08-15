@@ -148,7 +148,7 @@ Every XP gain, level-up, and gold reward is **tracked on-chain**:
 
 ## ✨ Why StakeWars is Different  
 
-- **Player actions are permanent:** Every dice roll, mission, or battle outcome is tracked on-chain.  
+- **Player actions are permanent:** Every mission or battle outcome is tracked on-chain.  
 - **Identity is meaningful:** Each ninja NFT evolves with the player, not just visually.  
 - **Progression is portable:** NFTs can be traded or sold with all XP, traits, and resources intact.  
 - **Honeycomb as a core mechanic:** The protocol isn’t just a backend—it **shapes gameplay**, rewards contribution, and powers strategic growth.  
@@ -162,7 +162,9 @@ StakeWars demonstrates a creative way to use Honeycomb Protocol: **player contri
 - Expand ninja roster (4 villages × 5 chakra types)  
 - Add additional abilities and rare traits  
 - Introduce PvP leaderboards with on-chain scoring  
-- Build seasonal events that reward on-chain contribution  
+- Build seasonal events that reward on-chain contributions  
+- Snakes and ladders-type maps for adventure
+- Village vs Village tournaments/wars
 
 ---
 
