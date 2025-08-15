@@ -1,6 +1,6 @@
 import React from "react";
 import { Button } from "./ui/button";
-import { useUserStore } from "@/store/user-store";
+import { useUserStore } from "@/store/useUser";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useRouter } from "next/navigation";
 

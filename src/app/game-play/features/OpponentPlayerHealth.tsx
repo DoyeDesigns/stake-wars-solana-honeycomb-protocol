@@ -1,5 +1,5 @@
 import React from 'react'
-import { GameRoomDocument } from '@/store/online-game-store';
+import { GameRoomDocument } from '@/store/useOnlineGame';
 import { OpponentProgress } from '@/components/ui/opponent-progress';
 import { compactHash } from '@/components/ConnectButton';
 import { useWallet } from '@solana/wallet-adapter-react';

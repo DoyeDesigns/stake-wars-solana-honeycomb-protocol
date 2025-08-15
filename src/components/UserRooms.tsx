@@ -1,6 +1,6 @@
 import React, { Dispatch, SetStateAction, useEffect, useState } from "react";
-import { GameRoomDocument } from "@/store/online-game-store";
-import useOnlineGameStore from "@/store/online-game-store";
+import { GameRoomDocument } from "@/store/useOnlineGame";
+import useOnlineGameStore from "@/store/useOnlineGame";
 import { useRouter } from "next/navigation";
 import { Button } from "./ui/button";
 import {

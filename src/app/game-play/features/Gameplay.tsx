@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react';
-import useOnlineGameStore from '@/store/online-game-store';
+import useOnlineGameStore from '@/store/useOnlineGame';
 import { Ability, CHARACTERS } from '@/lib/characters';
 import DiceRollToDetermineFirstTurn from '@/components/FirstTurnDiceRoll';
 import DiceRoll from '@/components/DiceRoll';

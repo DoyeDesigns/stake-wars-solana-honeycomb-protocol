@@ -1,6 +1,6 @@
 'use client'
 
-import useOnlineGameStore from "@/store/online-game-store";
+import useOnlineGameStore from "@/store/useOnlineGame";
 import { toast } from 'react-toastify';
 import { Button } from "./ui/button";
 import { useWallet } from "@solana/wallet-adapter-react";

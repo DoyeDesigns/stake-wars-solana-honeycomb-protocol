@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
-import useOnlineGameStore from "@/store/online-game-store";
-import { GameRoomDocument } from "@/store/online-game-store";
+import useOnlineGameStore from "@/store/useOnlineGame";
+import { GameRoomDocument } from "@/store/useOnlineGame";
 import { toast } from 'react-toastify';
 import { Button } from "./ui/button";
 import { MoonLoader } from "react-spinners";

@@ -9,7 +9,7 @@ import { client } from '@/utils/constants/client';
 import { Button } from './ui/button';
 import { buffs } from '@/lib/buffs';
 import { sendClientTransactions } from '@honeycomb-protocol/edge-client/client/walletHelpers';
-import useOnlineGameStore from '@/store/online-game-store';
+import useOnlineGameStore from '@/store/useOnlineGame';
 import { usePathname } from 'next/navigation';
 
 const CHAKRA_RESOURCE_TREE_ADDRESS = process.env.CHAKRA_RESOURCE_TREE_ADDRESS as string
@@ -86,7 +86,7 @@ export default function Marketplace() {
         <DialogTrigger className="connect-button-bg size-[84px] px-5 rounded-full items-center justify-center cursor-pointer border-2 border-[#FFFFFF]">
           <img src="/market.svg" alt="market" width={37} height={37} />
         </DialogTrigger>
-        <DialogContent className="bg-[#242424] min-w-[calc(100%-2rem)] my-5 overflow-auto max-h-[500px]">
+        <DialogContent className="bg-[#242424] min-w-[calc(100%-2rem)] my-5 overflow-auto max-h-[450px] sm:max-h-[550px]">
           <DialogTitle className="text-0[18px] text-[#9D9C9E]">
             Acquire extra gear and power ups to better your battle chances
           </DialogTitle>
@@ -100,12 +100,6 @@ export default function Marketplace() {
                 >
                   Power-ups
                 </TabsTrigger>
-                {/* <TabsTrigger
-                  className="cursor-pointer data-[state=active]:!bg-transparent rounded-none data-[state=active]:border-b-4 data-[state=active]:border-b-[#BFE528] pb-2.5"
-                  value="character"
-                >
-                  Characters
-                </TabsTrigger> */}
               </div>
               <div>
                 <span>Balance: {chakraBalance ? chakraBalance : 0} CHK(chakra)</span>
@@ -127,9 +121,6 @@ export default function Marketplace() {
                 </div>
               ))}
             </TabsContent>
-            {/* <TabsContent value="characters">
-              
-            </TabsContent> */}
           </Tabs>
         </DialogContent>
       </Dialog>

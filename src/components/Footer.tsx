@@ -4,7 +4,7 @@ import Link from 'next/link'
 import React from 'react'
 import HowToPlay from './HowToPlay'
 import { usePathname } from 'next/navigation';
-import useOnlineGameStore from '@/store/online-game-store';
+import useOnlineGameStore from '@/store/useOnlineGame';
 
 export default function Footer() {
     const path = usePathname();

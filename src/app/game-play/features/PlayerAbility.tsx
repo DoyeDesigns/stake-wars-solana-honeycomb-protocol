@@ -1,5 +1,5 @@
 import React from 'react'
-import { GameRoomDocument } from '@/store/online-game-store';
+import { GameRoomDocument } from '@/store/useOnlineGame';
 import { useWallet } from '@solana/wallet-adapter-react';
 
 export default function PlayerAbility({ gameState, userId }: {

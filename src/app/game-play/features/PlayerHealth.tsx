@@ -1,4 +1,4 @@
-import { GameRoomDocument } from "@/store/online-game-store";
+import { GameRoomDocument } from "@/store/useOnlineGame";
 import { Progress } from "@/components/ui/progress";
 import { compactHash } from "@/components/ConnectButton";
 import PlayerAbility from "./PlayerAbility";

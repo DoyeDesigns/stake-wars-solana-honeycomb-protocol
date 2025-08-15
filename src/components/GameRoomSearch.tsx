@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { collection, doc, getDoc } from 'firebase/firestore';
 import { db } from '@/config/firebase';
-import { GameRoomDocument } from '@/store/online-game-store';
+import { GameRoomDocument } from '@/store/useOnlineGame';
 import { useRouter } from 'next/navigation';
 import { Button } from './ui/button';
 import { Input } from './ui/input';

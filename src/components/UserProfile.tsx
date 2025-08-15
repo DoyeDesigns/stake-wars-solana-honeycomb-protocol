@@ -8,12 +8,14 @@ import { useEffect, useState } from "react";
 import ProfileTabs from "./ProfileTabs";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { LAMPORTS_PER_SOL } from "@solana/web3.js";
+import { useUserStore } from "@/store/useUser";
 
 export default function UserProfile() {
   const { connection } = useConnection();
   const wallet = useWallet();
   const [balance, setBalance] = useState<number | null>(null);
   const [isOpen, setIsOpen] = useState(false);
+  const { user } = useUserStore()
 
   useEffect(() => {
     const fetchBalance = async () => {
@@ -54,8 +56,8 @@ export default function UserProfile() {
                     <img src="/wallet.png" alt="wallet" />
                   </span>
                   <span className="font-bold text-[18px]">
-                    {wallet.publicKey
-                      ? compactHash(wallet.publicKey.toString())
+                    {user?.profiles
+                      ? compactHash(user?.profiles?.[0]?.address)
                       : "Not Connected"}
                   </span>{" "}
                   <button className="p-0 mt-px">

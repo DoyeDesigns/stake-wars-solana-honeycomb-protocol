@@ -9,7 +9,7 @@ import { sendClientTransactions } from "@honeycomb-protocol/edge-client/client/w
 import { toast } from "react-toastify";
 import { Button } from "./ui/button";
 import base58 from "bs58";
-import { useUserStore } from "@/store/user-store";
+import { useUserStore } from "@/store/useUser";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 
 type ConnectButtonProps = {

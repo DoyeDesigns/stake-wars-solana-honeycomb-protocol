@@ -5,11 +5,12 @@ import { motion } from "framer-motion";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Character } from "@/lib/characters";
 import { Button } from "@/components/ui/button";
-import useOnlineGameStore from "@/store/online-game-store";
+import useOnlineGameStore from "@/store/useOnlineGame";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { toast } from "react-toastify";
 import { useSearchParams } from "next/navigation";
 import { useRouter } from "next/navigation";
+import Missions from "@/components/Missions";
 
 const CARD_WIDTH = 155;
 const CARD_OFFSET = 60;
@@ -53,10 +54,10 @@ export default function CharacterCarousel({ characters }: CharacterCarouselProps
         throw new Error("Failed to create game room.");
       }
 
-      // setCreatedGameRoom(roomId)
-
       selectCharacters(roomId, activeCharacter, wallet.publicKey?.toString() as string, );
       await joinGameRoom(roomId, wallet.publicKey?.toString() as string);
+
+      router.push(`/game-play/${roomId}`)
 
       toast.success("Game room created and joined successfully!");
     } catch (error) {
@@ -169,16 +170,11 @@ export default function CharacterCarousel({ characters }: CharacterCarouselProps
         </div>
       </div>
 
-      <div className="flex flex-wrap justify-center gap-3 pb-10">
-        <Button
-          className="bg-black text-white h-10.2 w-50 border border-[#6B6969] rounded-lg"
-          onClick={() => toast.info("Mission started")}
-        >
-          Go on a mission
-        </Button>
+      <div className="flex flex-wrap justify-center gap-3 pb-18 sm:pb-10">
+        <Missions character={activeCharacter} />
 
         {roomToJoinId ? ( <Button
-          className="connect-button-bg h-10.2 w-[140px] border border-[#FFFFFF] rounded-lg"
+          className="connect-button-bg h-10.5 w-[140px] border border-[#FFFFFF] rounded-lg"
           onClick={joinGame}
           disabled={isJoining}
         >

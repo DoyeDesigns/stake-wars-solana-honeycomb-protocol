@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react';
-import useOnlineGameStore from '@/store/online-game-store'; 
+import useOnlineGameStore from '@/store/useOnlineGame'; 
 import { Button } from './ui/button';
 
 interface DefenseModalProps {
