@@ -1,6 +1,6 @@
 # StakeWars – On-Chain Ninja RPG Powered by Honeycomb Protocol  
 
-![Banner Image Placeholder](/banner.png)  
+![Banner Image Placeholder](./public/banner.png)  
 
 **StakeWars** is a feudal ninja strategy game that redefines what progression means in gaming. Instead of temporary XP bars, off-chain achievements, or reset inventories, every action, contribution, and victory in StakeWars is **verifiably recorded on-chain** using Honeycomb Protocol. Players grow, evolve, and own their progress—permanently.  
 
@@ -62,7 +62,7 @@ When a player sends a ninja on a mission or staking quest:
 - Missions persist across devices and sessions.  
 - Rewards are trustless: the blockchain is the source of truth.  
 
-*![Mission Flow image](/mission-flow.png)*  
+*![Mission Flow image](./public/mission-flow.png)*  
 
 ---
 
@@ -98,7 +98,7 @@ Every XP gain, level-up, and gold reward is **tracked on-chain**:
 - Players’ contributions are **trustless and verifiable**.  
 - On-chain progression allows **reputation systems, skill trees, and loyalty mechanics** to be built directly into gameplay.  
 
-*![Level Up image](/level-up.png)*  
+*![Level Up image](./public/level-up.png)*  
 
 ---
 
@@ -120,14 +120,6 @@ Every XP gain, level-up, and gold reward is **tracked on-chain**:
 - Trade resources and tools on-chain using gold.  
 - All ninja NFTs are **fully tradable**, with progression and traits intact.  
 - Marketplace supports village-specific upgrades to reinforce identity and strategy.  
-
----
-
-## 🎨 Visual Assets  
-
-- Ninja Characters: [Placeholder for NFT images]  
-- Battle Flow: [Placeholder for dice and combat animation screenshots]  
-- Mission Interface: [Placeholder for idle mode interface]  
 
 ---
 
