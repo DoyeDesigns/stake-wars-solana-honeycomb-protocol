@@ -126,7 +126,7 @@ Every XP gain, level-up, and gold reward is **tracked on-chain**:
 ## ▶️ Demo Video  
 
 **Watch the gameplay walkthrough here:**  
-[video walkthrough](https://www.youtube.com/)  
+[video walkthrough](https://drive.google.com/file/d/1SWlJrvXecEwj1OHZZM7ueVoq7SFIiAPa/view?usp=sharing)  
 
 ---
 
