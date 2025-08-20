@@ -5,7 +5,6 @@ import ImageSlider from "@/components/ImageSlider";
 import { client } from "@/utils/constants/client";
 import { useWallet } from "@solana/wallet-adapter-react";
 import React, { useEffect, useState } from "react";
-import { sendClientTransactions } from "@honeycomb-protocol/edge-client/client/walletHelpers";
 import { toast } from "react-toastify";
 import { Button } from "@/components/ui/button";
 import { Character, CHARACTERS } from "@/lib/characters";
@@ -15,13 +14,8 @@ import { useRouter } from "next/navigation";
 import { characterAdressess } from "@/lib/charater-address";
 import { PartialCharacter } from "../lobby/page";
 
-const ASSEMBLER_CONFIG_ADDRESS = process.env.ASSEMBLER_CONFIG_ADDRESS as string;
-const PROJECT_ADDRESS = process.env.PROJECT_ADDRESS as string;
 const CHAKRA_RESOURCE_TREE_ADDRESS = process.env
   .CHAKRA_RESOURCE_TREE_ADDRESS as string;
-
-const traitUri =
-  "https://lh3.googleusercontent.com/-Jsm7S8BHy4nOzrw2f5AryUgp9Fym2buUOkkxgNplGCddTkiKBXPLRytTMXBXwGcHuRr06EvJStmkHj-9JeTfmHsnT0prHg5Mhg";
 
 export default function MintCharacter() {
   const wallet = useWallet();
@@ -45,14 +39,10 @@ export default function MintCharacter() {
   const [characterAbilities, setCharacterAbilities] = useState<Character[]>([]);
   const router = useRouter();
 
-  const villages = [
-    "Hidden Leaf",
-    "Hidden Sand",
-    "Hidden Mist",
-    "Hidden Cloud",
-  ];
-  // const weapons = ["Kunai", "Shuriken", "Sword", "Scythe"];
-  const chakras = ["Fire", "Water", "Wind", "Earth", "Lightning"];
+  function getCharacterId(attributes: Record<string, string>) {
+    const normalize = (str: string) => str.toLowerCase().replace(/\s+/g, "_");
+    return `${normalize(attributes.Village)}-${normalize(attributes.Chakra)}`;
+  }
 
   useEffect(() => {
     const fetchCharacters = async () => {
@@ -60,10 +50,21 @@ export default function MintCharacter() {
       setCharacterLengthBeforeMint(characters.length);
     };
 
-    fetchCharacters();
-    fetchResourcesBalance();
-    fetchUserCharacters();
-  }, []);
+    if (wallet.connected) {
+      fetchCharacters();
+      fetchResourcesBalance();
+      fetchUserCharacters();
+    } else {
+      setCharacterLengthBeforeMint(null);
+      setCharacterLengthAfterMint(null);
+      setNewCharacter(null);
+      setCharacterAbility(null);
+      setCharacterId(null);
+      setNewCharacterModelAddress(null);
+      setChakraBalance(null);
+      setCharacterAbilities([]);
+    }
+  }, [wallet.connected, wallet.disconnecting]);
 
   useEffect(() => {
     if (characterId) {
@@ -78,10 +79,7 @@ export default function MintCharacter() {
     }
   }, [characterId]);
 
-  function getCharacterId(attributes: Record<string, string>) {
-    const normalize = (str: string) => str.toLowerCase().replace(/\s+/g, "_");
-    return `${normalize(attributes.Village)}-${normalize(attributes.Chakra)}`;
-  }
+
 
   const findCharacters = async (): Promise<CharacterType[]> => {
     try {
@@ -97,6 +95,7 @@ export default function MintCharacter() {
       const result = await client
         .findCharacters({
           trees: [newCharacterModelAddress as string],
+          wallets: [wallet.publicKey?.toString() as string],
         })
         .then(({ character }) => character);
 
@@ -108,6 +107,7 @@ export default function MintCharacter() {
   };
 
   const fetchUserCharacters = async () => {
+    if (!wallet.publicKey) return;
     try {
       const treeAddresses = Array.from(
         new Set(characterAdressess.map((c) => c.treeAdress))
@@ -116,6 +116,7 @@ export default function MintCharacter() {
       const { character } = await client.findCharacters({
         trees: treeAddresses,
         includeProof: true,
+        wallets: [wallet.publicKey?.toString() as string],
       });
 
       const matchedAbilities = (character as PartialCharacter[])
@@ -148,47 +149,30 @@ export default function MintCharacter() {
         return;
       }
 
-      if (!PROJECT_ADDRESS || !ASSEMBLER_CONFIG_ADDRESS) {
-        toast.error("Project or assembler config address not set!");
+      const mintResponse = await fetch("/api/mint-character", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          walletPublicKey: wallet.publicKey.toString(),
+          characterAddresses: characterAdressess,
+        }),
+      });
+
+      if (!mintResponse.ok) {
+        const errorData = await mintResponse.json();
+        toast.error(errorData.error || "Failed to create mint transaction");
         return;
       }
 
-      const generated = generateOrderedCharacterTraits().map(
-        (trait) => [trait.label, trait.name] as [string, string]
-      );
+      const mintData = await mintResponse.json();
+      
+      setCharacterId(mintData.characterId);
+      setNewCharacterModelAddress(mintData.treeAddress);
 
-      const attributesObject: Record<string, string> =
-        Object.fromEntries(generated);
-      const id = getCharacterId(attributesObject);
-      setCharacterId(id);
-
-      const matchedCharacter = characterAdressess.find(
-        (char) => char.id === id
-      );
-
-      if (!matchedCharacter) {
-        toast.error("Character address not found for ID: " + id);
-        return;
-      }
-
-      const characterModelAddress = matchedCharacter.address;
-      setNewCharacterModelAddress(matchedCharacter.treeAdress);
-
-      const { createAssembleCharacterTransaction: txResponse } =
-        await client.createAssembleCharacterTransaction({
-          project: PROJECT_ADDRESS,
-          assemblerConfig: ASSEMBLER_CONFIG_ADDRESS,
-          authority: wallet.publicKey.toString(),
-          characterModel: characterModelAddress,
-          owner: wallet.publicKey.toBase58(),
-          payer: wallet.publicKey.toString(),
-          attributes: generated,
-        });
-
-      const response = await sendClientTransactions(client, wallet, txResponse);
-
-      if (response[0].responses[0].status === "Success") {
-        toast.success(response[0].responses[0].signature);
+      if (mintData.transactionResult && mintData.transactionResult.status === "Success") {
+        toast.success("Character minted successfully!");
 
         const characters = await findCharacters();
         setCharacterLengthAfterMint(characters.length);
@@ -219,29 +203,7 @@ export default function MintCharacter() {
   };
 
 
-  function generateOrderedCharacterTraits() {
-    const shuffledVillages = [...villages]
-      .sort(() => 0.5 - Math.random())
-      .slice(0, 1);
 
-    const shuffledChakras = [...chakras]
-      .sort(() => 0.5 - Math.random())
-      .slice(0, 1);
-
-    const villageTrait = {
-      label: "Village",
-      name: shuffledVillages[0],
-      uri: traitUri,
-    };
-
-    const chakraTrait = {
-      label: "Chakra",
-      name: shuffledChakras[0],
-      uri: traitUri,
-    };
-
-    return [villageTrait, chakraTrait];
-  }
 
   return (
     <div>
@@ -252,6 +214,14 @@ export default function MintCharacter() {
           className="size-[206px] hidden sm:block"
         />
         <h1 className="font-bold text-2xl -mt-4 mb-1">Mint your Character</h1>
+        
+        {/* Chakra Balance Display */}
+        {wallet.connected && chakraBalance !== null && (
+          <div className="flex items-center gap-2 mt-4 bg-[#313030] px-4 py-2 rounded-lg border border-[#E3DEDE]">
+            <img src="/chakra_coin.svg" alt="chakra" width={20} height={20} />
+            <span className="text-white font-bold">Balance: {chakraBalance} CHK</span>
+          </div>
+        )}
       </div>
 
       {(characterLengthAfterMint ?? 0) > (characterLengthBeforeMint ?? 0) &&
@@ -302,26 +272,48 @@ export default function MintCharacter() {
         </div>
       ) : (
         <div className="flex flex-col justify-center items-center mt-[65px]">
+          {/* Existing Characters Section */}
+          {wallet.connected && characterAbilities.length > 0 && (
+            <div className="mb-8 w-full max-w-4xl">
+              <h2 className="text-xl font-bold text-white mb-4 text-center">Your Existing Characters</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {characterAbilities.map((character, index) => (
+                  <div key={index} className="bg-[#313030] p-4 rounded-xl border border-[#E3DEDE]">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-16 h-16 bg-[#1a1a1a] border-2 border-black rounded-md flex items-center justify-center overflow-hidden">
+                        <img
+                          src={`/characters/${character.id}.png`}
+                          alt={character.nickname}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-white text-sm">{character.nickname}</h3>
+                        <p className="text-xs text-gray-300">{character.village}</p>
+                        <p className="text-xs text-gray-300">{character.specialty}</p>
+                      </div>
+                    </div>
+                    <div className="text-xs text-gray-300">
+                      <p><span className="font-bold">Health:</span> {character.baseHealth}</p>
+                      <p><span className="font-bold">Abilities:</span> {character.abilities.length}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="bg-[#313030] px-8 flex items-center justify-between rounded-xl border-[#E3DEDE] border-[0.75px] w-[540px] h-[250px]">
             <ImageSlider />
             <CircleCarousel />
           </div>
-          {characterAbilities.length > 3 ? (
-            <Button
-              disabled={(chakraBalance ?? 0) < 5000}
-              className="connect-button-bg cursor-pointer w-fit h-10.5 mt-20"
-            >
-              Buy Character 5000 CHK
-            </Button>
-          ) : (
-            <Button
+          <Button
               className="connect-button-bg cursor-pointer w-[175px] h-10.5 mt-20"
               disabled={isMinting}
               onClick={() => mintCharacter()}
             >
               Mint Character
             </Button>
-          )}
           <Button onClick={() => router.push('/lobby')} className="connect-button-bg cursor-pointer w-[175px] h-10.5 mt-3 mb-10">lobby</Button>
         </div>
       )}

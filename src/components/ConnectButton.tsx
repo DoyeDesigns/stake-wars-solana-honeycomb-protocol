@@ -39,6 +39,8 @@ export default function ConnectButton({ width }: ConnectButtonProps) {
       includeProof: true,
     });
 
+    console.log("userzz", user)
+
     if (user.length > 0) {
       setUser(user as unknown as User);                        
     }
@@ -54,10 +56,14 @@ useEffect(() => {
     if (!user) return;
 
     try {
+      console.log("user.id", user.id)
       const { profile } = await client.findProfiles({
+        userIds: [user.id],
         projects: [PROJECT_ADDRESS],
         includeProof: true,
       });
+
+      console.log("profile", profile)
 
        if (!user.profiles || user.profiles.length === 0) {
       updateUser({ profiles: profile });
@@ -69,7 +75,7 @@ useEffect(() => {
   };
 
   checkIfUserHasProfile();
-}, [user]);
+}, [user?.id]);
 
 const authenticateWithEdgeClient = async () => {
   if (!wallet.publicKey) {

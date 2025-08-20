@@ -8,16 +8,14 @@ import { toast } from 'react-toastify';
 import { client } from '@/utils/constants/client';
 import { Button } from './ui/button';
 import { buffs } from '@/lib/buffs';
-import { sendClientTransactions } from '@honeycomb-protocol/edge-client/client/walletHelpers';
 import useOnlineGameStore from '@/store/useOnlineGame';
 import { usePathname } from 'next/navigation';
 
 const CHAKRA_RESOURCE_TREE_ADDRESS = process.env.CHAKRA_RESOURCE_TREE_ADDRESS as string
-const PROJECT_AUTHORITY = process.env.PROJECT_AUTHORITY as string
-const CHAKRA_RESOURCE_ADDRESS = process.env.CHAKRA_RESOURCE_ADDRESS as string
 
 export default function Marketplace() {
   const [chakraBalance, setChakraBalance] = useState<number | null>(null);
+  const [isOpen, setIsOpen] = useState(false);
     const wallet = useWallet();
     const { addBuffToPlayer, gameState, roomId } = useOnlineGameStore();
     const pathname = usePathname();
@@ -55,25 +53,42 @@ export default function Marketplace() {
     }
 
     const purchasePowerUp = async (powerUp: { name: string; effect: number; remainingTurns: number; price: number; village: string; }) => {
-        if (!wallet.publicKey || !PROJECT_AUTHORITY || !CHAKRA_RESOURCE_ADDRESS) {
-          alert("Missing required data");
+        if (!wallet.publicKey) {
+          toast.error("Wallet not connected!");
           return;
         }
 
-        const {
-        createBurnResourceTransaction: txResponse 
-      } = await client.createBurnResourceTransaction({
-          authority: PROJECT_AUTHORITY,
-          resource: CHAKRA_RESOURCE_ADDRESS,
-          amount: powerUp.price.toString(),
-          // payer: adminPublicKey.toString(),
-      });
-      
-        const response = await sendClientTransactions(client, wallet, txResponse);
-        if (response[0].responses[0].status === "Success") {
-          addBuffToPlayer(currentPlayer as 'player1' | 'player2', powerUp.name, powerUp.effect, powerUp.remainingTurns)
-          fetchResourcesBalance()
-          toast.success(`successfully bought ${powerUp.name}. Power up now equipped!`)
+        try {
+          // Call the server API to burn resources
+          const burnResponse = await fetch("/api/burn-resource", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              amount: powerUp.price,
+            }),
+          });
+
+          if (!burnResponse.ok) {
+            const errorData = await burnResponse.json();
+            toast.error(errorData.error || "Failed to burn resources");
+            return;
+          }
+
+          const burnData = await burnResponse.json();
+          
+          if (burnData.transactionResult && burnData.transactionResult.status === "Success") {
+            addBuffToPlayer(currentPlayer as 'player1' | 'player2', powerUp.name, powerUp.effect, powerUp.remainingTurns)
+            fetchResourcesBalance()
+            toast.success(`Successfully bought ${powerUp.name}. Power up now equipped!`)
+            setIsOpen(false);
+          } else {
+            toast.error("Transaction failed");
+          }
+        } catch (error) {
+          console.error("Purchase power up error:", error);
+          toast.error("Failed to purchase power up");
         }
     }
 
@@ -82,7 +97,7 @@ export default function Marketplace() {
 
   return (
     <div className="fixed bottom-[137px] left-5">
-      <Dialog>
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogTrigger className="connect-button-bg size-[84px] px-5 rounded-full items-center justify-center cursor-pointer border-2 border-[#FFFFFF]">
           <img src="/market.svg" alt="market" width={37} height={37} />
         </DialogTrigger>

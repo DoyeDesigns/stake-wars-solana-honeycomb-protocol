@@ -18,9 +18,12 @@ const MAX_VISIBILITY = 2;
 
 interface CharacterCarouselProps {
   characters: Character[];
+  onCharacterSelect?: (character: Character) => void;
+  selectedCharacter?: Character | null;
+  isAIGame?: boolean;
 }
 
-export default function CharacterCarousel({ characters }: CharacterCarouselProps) {
+export default function CharacterCarousel({ characters, onCharacterSelect, selectedCharacter, isAIGame = false }: CharacterCarouselProps) {
   const wallet = useWallet();
   const [active, setActive] = useState(0);
   // const [createdGameRoom, setCreatedGameRoom] = useState<string | null>(null);
@@ -38,7 +41,14 @@ export default function CharacterCarousel({ characters }: CharacterCarouselProps
   }
 }, [searchParams]);
 
-  const activeCharacter = characters[active]; 
+  const activeCharacter = characters[active];
+
+  // Handle character selection for AI games
+  const handleCharacterSelect = () => {
+    if (onCharacterSelect && isAIGame) {
+      onCharacterSelect(activeCharacter);
+    }
+  };
 
   const createGame = async () => {
     if (!wallet.connected) {
@@ -109,7 +119,19 @@ export default function CharacterCarousel({ characters }: CharacterCarouselProps
   };
 
   return (
-    <div className="flex flex-col gap-10 justify-center items-center">
+    <div>
+      <div className="flex flex-col items-center mt-5">
+        <img
+          src="/stake-wars-logo.png"
+          alt="stake wars logo"
+          className="size-[206px] hidden sm:block"
+        />
+        <h1 className="font-medium text-lg px-2 md:text-2xl text-center -mt-4 mb-1">
+          {roomToJoinId ? (<span>Join <span className="font-semibold">{roomToJoinId}</span> Game to Battle. Select your character and join the game</span>) : "You're now Combat Ready! Select your character"}
+        </h1>
+      </div>
+
+      <div className="flex flex-col gap-10 justify-center items-center">
       <div className="relative w-fit flex justify-center items-center mt-8 overflow-hidden">
         <div className="md:block absolute left-0 z-50">
           <button onClick={handlePrev}>
@@ -163,6 +185,15 @@ export default function CharacterCarousel({ characters }: CharacterCarouselProps
                     alt={character.nickname}
                     className="rounded-xl w-full h-full object-contain"
                   />
+                  {isAIGame && (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      {selectedCharacter?.id === character.id && (
+                        <div className="bg-green-500 text-white px-2 py-1 rounded-full text-xs font-bold">
+                          SELECTED
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </motion.div>
               </div>
             );
@@ -170,23 +201,56 @@ export default function CharacterCarousel({ characters }: CharacterCarouselProps
         </div>
       </div>
 
-      <div className="flex flex-wrap justify-center gap-3 pb-18 sm:pb-10">
-        <Missions character={activeCharacter} />
+      <div className="flex flex-wrap justify-center gap-3 pb-5 sm:pb-10">
+        {!isAIGame && <Missions character={activeCharacter} />}
 
-        {roomToJoinId ? ( <Button
-          className="connect-button-bg h-10.5 w-[140px] border border-[#FFFFFF] rounded-lg"
-          onClick={joinGame}
-          disabled={isJoining}
-        >
-          {isCreating ? "Joining..." : "Join game"}
-        </Button>) : (<Button
-          className="connect-button-bg h-10.2 w-[140px] border border-[#FFFFFF] rounded-lg"
-          onClick={createGame}
-          disabled={isCreating}
-        >
-          {isCreating ? "Creating..." : "Create a game"}
-        </Button>)}
+        {isAIGame ? (
+          <Button
+            className="connect-button-bg h-10.5 w-[140px] border border-[#FFFFFF] rounded-lg"
+            onClick={handleCharacterSelect}
+            disabled={!activeCharacter}
+          >
+            Select Character
+          </Button>
+        ) : (
+          <>
+            {roomToJoinId ? (
+              <motion.div
+                animate={{
+                  scale: [1, 1.05, 1],
+                  boxShadow: [
+                    "0 0 0 rgba(255, 255, 255, 0)",
+                    "0 0 20px rgba(255, 255, 255, 0.5)",
+                    "0 0 0 rgba(255, 255, 255, 0)"
+                  ]
+                }}
+                transition={{
+                  duration: 1.5,
+                  repeat: Infinity,
+                  ease: "easeInOut"
+                }}
+              >
+                <Button
+                  className="connect-button-bg h-10.5 w-[200px] border-2 border-[#FFD95E] rounded-lg font-bold text-lg"
+                  onClick={joinGame}
+                  disabled={isJoining}
+                >
+                  {isJoining ? "Joining..." : `Join Game`}
+                </Button>
+              </motion.div>
+            ) : (
+              <Button
+                className="connect-button-bg h-10.2 w-[140px] border border-[#FFFFFF] rounded-lg"
+                onClick={createGame}
+                disabled={isCreating}
+              >
+                {isCreating ? "Creating..." : "Create a game"}
+              </Button>
+            )}
+          </>
+        )}
       </div>
+    </div>
     </div>
   );
 }

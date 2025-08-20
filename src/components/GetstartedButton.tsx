@@ -13,7 +13,7 @@ export default function GetstartedButton() {
     <div>
       <Button
       onClick={() => router.push('/lobby')}
-        disabled={user?.profiles ? false : true}
+        disabled={user?.profiles ? true : false}
         className={`text-white border border-white ${
           user?.profiles ? "connect-button-bg" : "bg-[#28252D]"
         } min-h-[42px] w-50 rounded-[7px] font-semibold`}
@@ -21,8 +21,7 @@ export default function GetstartedButton() {
         Get Started
       </Button>
       {wallet.connected &&
-        user?.id &&
-        (!user.profiles || user.profiles.length === 0) && (
+        !user?.id && (
           <p className="text-center text-[#E8BF3C] text-sm font-normal mt-7.5">
             Authenticate with Honeycomb
           </p>

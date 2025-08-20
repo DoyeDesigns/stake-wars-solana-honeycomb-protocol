@@ -1,66 +1,97 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { useUserStore } from "@/store/useUser";
 import { Progress } from "@/components/ui/progress";
-import { client } from "@/utils/constants/client";
 import { useWallet } from "@solana/wallet-adapter-react";
-import { BadgesCondition } from "@honeycomb-protocol/edge-client";
-import { sendClientTransactions } from "@honeycomb-protocol/edge-client/client/walletHelpers";
 import { Button } from "./ui/button";
 import { toast } from "react-toastify";
 
 const ranks = [
   "Academy Student",
-  "Genin",
-  "Chunin",
-  "Special Jonin",
-  "Jonin",
-  "Anbu",
-  "Anbu Captain",
-  "Kage Assistant",
-  "Kage",
-  "Sannin",
-  "Sage",
-  "Jinchuriki",
-  "Akatsuki Member",
-  "Akatsuki Leader",
-  "Otsutsuki",
+          "Genin",
+          "Chūnin",
+          "Special Jōnin",
+          "Jōnin",
+          "Anbu Black Ops",
+          "Kage Candidate",
+          "Kage",
+          "Sannin",
+          "Legendary Ninja",
+          "Sage",
+          "Jinchūriki Vessel",
+          "Tailed Beast Master",
+          "Six Paths Disciple",
+          "Ōtsutsuki Initiate",
+          "Ōtsutsuki Warrior",
+          "Ōtsutsuki Sage",
+          "Ōtsutsuki God",
 ];
 
 const PROJECT_ADDRESS = process.env.PROJECT_ADDRESS as string;
 
 export default function NinjaRanks() {
-  const { user } = useUserStore();
+  const { user, refreshUser } = useUserStore();
   const wallet = useWallet();
 
-  // Grab achievements array for this project
   const matchingProfile = user?.profiles?.find(
     (profile) => profile?.project === PROJECT_ADDRESS
   );
 
+  useEffect(() => {
+    if (wallet.publicKey) {
+      refreshUser();
+    }
+  }, [wallet.publicKey])
+
   const achievements = matchingProfile?.platformData?.achievements ?? [];
+
 
   const claimBadge = async (index: number) => {
     if (!wallet.publicKey) {
-      alert("Wallet not connected!");
+      toast.error("Wallet not connected!");
       return;
     }
 
-    const { createClaimBadgeCriteriaTransaction: txResponse } =
-      await client.createClaimBadgeCriteriaTransaction({
-        args: {
-          profileAddress: matchingProfile?.address as string,
-          projectAddress: process.env.PROJECT_ADDRESS as string, 
-          proof: BadgesCondition.Public,
-          payer: wallet.publicKey.toString(),
-          criteriaIndex: index,
+    if (!matchingProfile?.address) {
+      toast.error("No matching profile found!");
+      return;
+    }
+
+    try {
+      // Call the server API to update platform data (add achievement)
+      const updateResponse = await fetch("/api/update-platform-data", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
+        body: JSON.stringify({
+          profileAddress: matchingProfile.address,
+          index: index,
+        }),
       });
 
-    const response = await sendClientTransactions(client, wallet, txResponse);
-    toast.success(`Claim response ${response[0].responses[0].signature}`);
+      if (!updateResponse.ok) {
+        const errorData = await updateResponse.json();
+        toast.error(errorData.error || "Failed to update platform data");
+        return;
+      }
+
+      const updateData = await updateResponse.json();
+      
+             if (updateData.transactionResult && updateData.transactionResult.status === "Success") {
+         toast.success("Successfully claimed badge!");
+         // Refresh user data to get updated achievements
+         await refreshUser();
+       } else {
+         toast.error("Transaction failed");
+       }
+    } catch (error) {
+      toast.error(`Failed to claim badge: ${error}`);
+    }
   };
 
-  const xp = Number(user?.profiles?.[0]?.platformData?.xp ?? 0);
+
+  
+  const xp = Number(matchingProfile?.platformData?.xp ?? 0);
   const xpPerLevel = 500;
   const thresholds = ranks.map((_, i) => xpPerLevel * (i + 1));
 
@@ -84,9 +115,9 @@ export default function NinjaRanks() {
           );
         }
 
-        const hasBadge = achievements[index] === 1;
+        const hasBadge = achievements.includes(index);
 
-        const canClaim = !hasBadge && (xp >= requiredXp && (!isCurrent || progress >= 100));
+        const canClaim = !hasBadge && xp >= requiredXp;
 
         return (
           <div
@@ -109,17 +140,22 @@ export default function NinjaRanks() {
               </span>
             </div>
 
-            <Progress value={progress} className="h-2" />
+                         <Progress 
+               value={hasBadge ? 100 : progress} 
+               className={`h-2 ${hasBadge || hasReached ? 'bg-green-600 dark:bg-green-600' : ''}`} 
+             />
 
-            <Button
-              onClick={() => canClaim && claimBadge(index)}
-              disabled={!canClaim}
-              className={`mt-4 w-full font-bold py-2 rounded transition ${
-                canClaim
-                  ? "bg-[#FFCE31] text-black hover:bg-[#FFD95E]"
-                  : "bg-gray-600 text-gray-300 cursor-not-allowed"
-              }`}
-            >
+                         <Button
+               onClick={() => canClaim && claimBadge(index)}
+               disabled={hasBadge || !canClaim}
+               className={`mt-4 w-full font-bold py-2 rounded transition ${
+                 hasBadge
+                   ? "bg-green-600 text-white cursor-not-allowed"
+                   : canClaim
+                   ? "bg-[#FFCE31] text-black hover:bg-[#FFD95E]"
+                   : "bg-gray-600 text-gray-300 cursor-not-allowed"
+               }`}
+             >
               {hasBadge
                 ? "✅ Badge Claimed"
                 : canClaim

@@ -39,6 +39,7 @@ export default function Lobby() {
       const { character } = await client.findCharacters({
         trees: treeAddresses,
         includeProof: true,
+        wallets: [wallet.publicKey?.toString() as string],
       });
 
       const matchedAbilities = (character as PartialCharacter[])
@@ -68,19 +69,29 @@ export default function Lobby() {
 
   return (
     <div>
-      <div className="flex flex-col items-center mt-5">
-        <img
-          src="/stake-wars-logo.png"
-          alt="stake wars logo"
-          className="size-[206px] hidden sm:block"
-        />
-        <h1 className="font-bold text-2xl text-center -mt-4 mb-1">
-          You&apos;re now Combat Ready!
-        </h1>
-      </div>
-
       <Suspense fallback={<div>Loading carousel...</div>}>
-        {characterAbilities.length > 0 ? (<CharacterCarousel characters={characterAbilities} />) : (<div className="flex justify-center items-center h-full w-full"><Button className="border-none connect-button-bg my-10 text-white bg-[#B91770] hover:bg-[#B91770]/80 cursor-pointer font-bold text-[12px] w-fit h-[38px] rounded-[4px]" onClick={() => router.push('/lobby')}>Mint Character</Button></div>)}
+        {characterAbilities.length > 0 ? (
+          <div className="space-y-6">
+            <div className="flex justify-center gap-4">
+              <Button 
+                onClick={() => router.push('/ai-game')}
+                className="bg-[#B91770] hover:bg-[#B91770]/80 text-white font-bold py-3 px-6 rounded-lg"
+              >
+                🎮 VS AI Mode
+              </Button>
+            </div>
+            <CharacterCarousel characters={characterAbilities} />
+          </div>
+        ) : (
+          <div className="flex justify-center items-center h-full w-full">
+            <Button 
+              className="border-none connect-button-bg my-10 text-white bg-[#B91770] hover:bg-[#B91770]/80 cursor-pointer font-bold text-[12px] w-fit h-[38px] rounded-[4px]" 
+              onClick={() => router.push('/mint-character')}
+            >
+              Mint Character
+            </Button>
+          </div>
+        )}
       </Suspense>
     </div>
   );

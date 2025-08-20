@@ -4,12 +4,7 @@ import React from 'react'
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { useWallet } from '@solana/wallet-adapter-react';
-import { client } from '@/utils/constants/client';
 import { toast } from 'react-toastify';
-import { sendClientTransactions } from '@honeycomb-protocol/edge-client/client/walletHelpers';
-
-const CHAKRA_RESOURCE_ADDRESS = process.env.CHAKRA_RESOURCE_ADDRESS as string
-const PROJECT_AUTHORITY = process.env.PROJECT_AUTHORITY as string
 
 export default function LostMessage() {
   const router = useRouter();
@@ -17,28 +12,36 @@ export default function LostMessage() {
 
   async function claimXP() {
         try {
-           if (!wallet.publicKey || !CHAKRA_RESOURCE_ADDRESS) {
-             alert("Missing required data");
+           if (!wallet.publicKey) {
+             alert("Wallet not connected");
              return;
            }
          
-           const { 
-           createMintResourceTransaction: txResponse 
-         } = await client.createMintResourceTransaction({
-             resource: CHAKRA_RESOURCE_ADDRESS, // Resource public key as a string
-             amount: "200",
-             authority: PROJECT_AUTHORITY, 
-             owner: wallet.publicKey.toString(), 
-             payer: PROJECT_AUTHORITY, 
-         });
-         
-           const response = await sendClientTransactions(client, wallet, txResponse);
+           // Call the server API to mint resources
+           const mintResponse = await fetch("/api/mint-resource", {
+             method: "POST",
+             headers: {
+               "Content-Type": "application/json",
+             },
+             body: JSON.stringify({
+               walletPublicKey: wallet.publicKey.toString(),
+               amount: 200,
+             }),
+           });
 
-           if (response[0].responses[0].status === "Success") {
-            toast.success(`Successfully claimed:, ${response}`);
+           if (!mintResponse.ok) {
+             const errorData = await mintResponse.json();
+             toast.error(errorData.error || "Failed to mint resources");
+             return;
+           }
+
+           const mintData = await mintResponse.json();
+           
+           if (mintData.transactionResult && mintData.transactionResult.status === "Success") {
+            toast.success("Successfully claimed 200 XP!");
             router.push("/lobby")
            } else {
-            throw new Error('transaction failed');
+            throw new Error('Transaction failed');
            }
         } catch (error) {
           toast.error(`Error Claiming XP: ${error instanceof Error ? error.message : 'Unknown error'}`);
