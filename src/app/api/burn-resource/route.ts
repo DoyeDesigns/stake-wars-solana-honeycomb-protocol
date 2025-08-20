@@ -25,7 +25,7 @@ const adminKeypair = Keypair.fromSecretKey(
 
 export async function POST(request: NextRequest) {
   try {
-    const { amount, userPublicKey } = await request.json();
+    const { amount } = await request.json();
 
     if (!amount || amount <= 0) {
       return NextResponse.json(
@@ -34,15 +34,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!userPublicKey) {
-      return NextResponse.json(
-        { error: "User public key is required" },
-        { status: 400 }
-      );
-    }
-
     const { createBurnResourceTransaction: txResponse } = await client.createBurnResourceTransaction({
-      authority: userPublicKey,
+      authority: PROJECT_AUTHORITY,
       resource: CHAKRA_RESOURCE_ADDRESS,
       amount: amount.toString(),
       payer: adminKeypair.publicKey.toString(),

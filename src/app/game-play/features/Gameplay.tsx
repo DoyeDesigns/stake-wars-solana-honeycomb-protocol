@@ -12,6 +12,8 @@ import OpponentPlayerHealth from './OpponentPlayerHealth';
 import WonMessage from './WonMessage'
 import LostMessage from './LostMessage'
 import { useWallet } from '@solana/wallet-adapter-react';
+import { Copy } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface LastAttackDetails {
   ability: Ability | null;
@@ -154,9 +156,32 @@ export default function Gameplay({roomId} : {roomId: string}) {
     setLastAttackDetails({ ability: null, attackingPlayer: null });
 };
 
+  const copyRoomId = async () => {
+    try {
+      await navigator.clipboard.writeText(roomId);
+      toast.success('Room ID copied to clipboard!');
+    } catch (err) {
+      toast.error('Failed to copy room ID');
+    }
+  };
+
   return (
     <div className='w-[95%] lg:w-[707px] relative mx-auto lg:px-0'>
         <OpponentPlayerHealth gameState={gameState} />
+        
+        {/* Room ID Display */}
+        <div className="flex justify-center items-center mt-4 mb-2">
+          <Button 
+            onClick={copyRoomId}
+            className="flex items-center gap-2 bg-[#313030] hover:bg-[#404040] transition-colors duration-200 px-4 py-2 rounded-lg border border-[#E3DEDE] cursor-pointer group"
+          >
+            <span className="text-white text-xs lg:text-sm font-medium">Room ID:</span>
+            <span className="text-[#BFE528] text-xs lg:text-sm font-bold font-mono">
+              {roomId.slice(-8)}
+            </span>
+            <Copy size={20} className='text-white' />
+          </Button>
+        </div>
       <div className="flex flex-col items-center my-[30px] bg-[#3F3F3F] rounded-[10px] p-6 pt-5">
         <span className="text-[22px] font-bold text-white text-center">
           {/* {gameState.currentTurn === 'player1' ? 'Player 1 turn' : 'Player 2 turn'} */}
@@ -182,7 +207,6 @@ export default function Gameplay({roomId} : {roomId: string}) {
         {showDefenseModal && defendingPlayer === gameState.currentTurn && (
         <DefenseModal
           player={defendingPlayer as 'player1' | 'player2'}
-          onClose={() => setShowDefenseModal(false)}
           onDefenseSelect={handleDefenseSelection}
           showSkipButton={showSkipDefenseButton}
         />

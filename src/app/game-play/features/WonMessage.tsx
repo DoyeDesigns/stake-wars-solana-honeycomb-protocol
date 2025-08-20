@@ -28,7 +28,6 @@ export default function WonMessage() {
 
          setIsClaiming(true);
          
-         // Get the first profile address
          const profileAddress = user.profiles[0]?.address;
          
          if (!profileAddress) {
@@ -36,7 +35,6 @@ export default function WonMessage() {
            return;
          }
          
-         // Call the claim-xp API for 20 XP
          const claimResponse = await fetch("/api/claim-xp", {
            method: "POST",
            headers: {
@@ -63,7 +61,6 @@ export default function WonMessage() {
            throw new Error("XP claim transaction failed");
          }
 
-         // Also call the mint-resource API for 500 resources (existing functionality)
          const mintResponse = await fetch("/api/mint-resource", {
            method: "POST",
            headers: {
@@ -84,10 +81,10 @@ export default function WonMessage() {
          const mintData = await mintResponse.json();
          
          if (mintData.transactionResult && mintData.transactionResult.status === "Success") {
-           toast.success("Successfully claimed 500 resources!");
+           toast.success("Successfully claimed 500 Chakra!");
            router.push("/lobby");
          } else {
-           throw new Error("Resource mint transaction failed");
+           throw new Error("Chakra mint transaction failed");
          }
       } catch (error) {
         toast.error(`Error Claiming Rewards: ${error instanceof Error ? error.message : 'Unknown error'}`);

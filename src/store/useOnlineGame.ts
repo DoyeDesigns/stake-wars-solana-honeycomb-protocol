@@ -186,10 +186,17 @@ checkDiceRollsAndSetTurn: async () => {
     return;
   }
 
-  const [player1Id, player2Id] = playerIds;
+  const creatorId = roomData.createdBy;
+  const joinerId = playerIds.find(id => id !== creatorId);
+  
+  if (!joinerId) {
+    toast.error('Could not determine both players.');
+    return;
+  }
+
   const playerRoles = {
-    player1: { id: player1Id, roll: gameState.diceRolls[player1Id] },
-    player2: { id: player2Id, roll: gameState.diceRolls[player2Id] },
+    player1: { id: creatorId, roll: gameState.diceRolls[creatorId] },
+    player2: { id: joinerId, roll: gameState.diceRolls[joinerId] },
   };
 
   const firstPlayer =

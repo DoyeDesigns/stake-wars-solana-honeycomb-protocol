@@ -59,7 +59,6 @@ export default function Marketplace() {
         }
 
         try {
-                     // Call the server API to burn resources
            const burnResponse = await fetch("/api/burn-resource", {
              method: "POST",
              headers: {
@@ -67,7 +66,6 @@ export default function Marketplace() {
              },
              body: JSON.stringify({
                amount: powerUp.price,
-               userPublicKey: wallet.publicKey.toString(),
              }),
            });
 
