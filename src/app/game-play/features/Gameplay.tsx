@@ -161,7 +161,7 @@ export default function Gameplay({roomId} : {roomId: string}) {
       await navigator.clipboard.writeText(roomId);
       toast.success('Room ID copied to clipboard!');
     } catch (err) {
-      toast.error('Failed to copy room ID');
+      toast.error(`Failed to copy room ID: ${err}`);
     }
   };
 
