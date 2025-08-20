@@ -1,14 +1,18 @@
 'use client'
 
-import React from 'react'
+import React, { useState } from 'react'
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { toast } from 'react-toastify';
+import { useUserStore } from '@/store/useUser';
 
 export default function LostMessage() {
   const router = useRouter();
   const wallet = useWallet();
+  const { user } = useUserStore();
+  const [isClaiming, setIsClaiming] = useState(false);
+  const [hasClaimed, setHasClaimed] = useState(false);
 
   async function claimXP() {
         try {
@@ -16,8 +20,50 @@ export default function LostMessage() {
              alert("Wallet not connected");
              return;
            }
-         
-           // Call the server API to mint resources
+
+           if (!user?.profiles || user.profiles.length === 0) {
+             toast.error("No profile found. Please create a profile first.");
+             return;
+           }
+
+           setIsClaiming(true);
+           
+           // Get the first profile address
+           const profileAddress = user.profiles[0]?.address;
+           
+           if (!profileAddress) {
+             toast.error("Profile address not found");
+             return;
+           }
+           
+           // Call the claim-xp API for 5 XP
+           const claimResponse = await fetch("/api/claim-xp", {
+             method: "POST",
+             headers: {
+               "Content-Type": "application/json",
+             },
+             body: JSON.stringify({
+               profileAddress: profileAddress,
+               xpAmount: 5,
+             }),
+           });
+
+           if (!claimResponse.ok) {
+             const errorData = await claimResponse.json();
+             toast.error(errorData.error || "Failed to claim XP");
+             return;
+           }
+
+           const claimData = await claimResponse.json();
+           
+           if (claimData.transactionResult && claimData.transactionResult.status === "Success") {
+            toast.success("Successfully claimed 5 XP!");
+            setHasClaimed(true);
+           } else {
+            throw new Error('XP claim transaction failed');
+           }
+
+           // Also call the mint-resource API for 200 resources (existing functionality)
            const mintResponse = await fetch("/api/mint-resource", {
              method: "POST",
              headers: {
@@ -38,14 +84,16 @@ export default function LostMessage() {
            const mintData = await mintResponse.json();
            
            if (mintData.transactionResult && mintData.transactionResult.status === "Success") {
-            toast.success("Successfully claimed 200 XP!");
+            toast.success("Successfully claimed 200 resources!");
             router.push("/lobby")
            } else {
-            throw new Error('Transaction failed');
+            throw new Error('Resource mint transaction failed');
            }
         } catch (error) {
-          toast.error(`Error Claiming XP: ${error instanceof Error ? error.message : 'Unknown error'}`);
+          toast.error(`Error Claiming Rewards: ${error instanceof Error ? error.message : 'Unknown error'}`);
           return;
+        } finally {
+          setIsClaiming(false);
         } 
       }
 
@@ -88,9 +136,10 @@ export default function LostMessage() {
           </Button>
           <Button
             onClick={() => claimXP()}
+            disabled={isClaiming || hasClaimed}
             className="border-none connect-button-bg text-white bg-[#B91770] hover:bg-[#B91770]/80 cursor-pointer font-bold text-[12px] w-[190px] h-[38px] rounded-[4px]"
           >
-            Claim 200 XP
+            {isClaiming ? "Claiming..." : hasClaimed ? "Claimed!" : "Claim 5 XP + 200 Resources"}
           </Button>
         </div>
       </div>

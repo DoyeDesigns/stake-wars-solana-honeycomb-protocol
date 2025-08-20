@@ -201,7 +201,7 @@ export default function CharacterCarousel({ characters, onCharacterSelect, selec
         </div>
       </div>
 
-      <div className="flex flex-wrap justify-center gap-3 pb-5 sm:pb-10">
+      <div className="flex flex-wrap justify-center gap-3 pb-10 sm:pb-20">
         {!isAIGame && <Missions character={activeCharacter} />}
 
         {isAIGame ? (
