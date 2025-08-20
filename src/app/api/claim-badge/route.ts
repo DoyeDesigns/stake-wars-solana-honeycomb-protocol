@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (userAddress === undefined || criteriaIndex < 0) {
+    if (!userAddress) {
         return NextResponse.json(
           { error: "Valid wallet address is required" },
           { status: 400 }
