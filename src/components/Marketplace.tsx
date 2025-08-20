@@ -59,16 +59,17 @@ export default function Marketplace() {
         }
 
         try {
-          // Call the server API to burn resources
-          const burnResponse = await fetch("/api/burn-resource", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              amount: powerUp.price,
-            }),
-          });
+                     // Call the server API to burn resources
+           const burnResponse = await fetch("/api/burn-resource", {
+             method: "POST",
+             headers: {
+               "Content-Type": "application/json",
+             },
+             body: JSON.stringify({
+               amount: powerUp.price,
+               userPublicKey: wallet.publicKey.toString(),
+             }),
+           });
 
           if (!burnResponse.ok) {
             const errorData = await burnResponse.json();
