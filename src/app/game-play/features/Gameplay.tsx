@@ -63,7 +63,7 @@ export default function Gameplay({roomId} : {roomId: string}) {
   }, [gameRoomId]);
 
   useEffect(() =>{
-    if (gameState.winner === 'player1' || gameState.winner === 'player2' && gameState.gameStatus === 'finished') {
+    if ((gameState.winner === 'player1' || gameState.winner === 'player2') && gameState.gameStatus === 'finished') {
       toast.info(`${gameState.winner} has won the game`);
       if (wallet.publicKey?.toString() === gameState[gameState?.winner]?.id) {
         setShowWinner(true);
@@ -75,6 +75,17 @@ export default function Gameplay({roomId} : {roomId: string}) {
   }, [gameState.winner, gameState.gameStatus])
 
   useEffect(() => {
+    if (gameState.gameStatus === 'inProgress') {
+      const player1Health = gameState.player1?.currentHealth || 0;
+      const player2Health = gameState.player2?.currentHealth || 0;
+      
+      if (player1Health <= 0 || player2Health <= 0) {
+        const winner = player1Health <= 0 ? 'player2' : 'player1';
+        useOnlineGameStore.getState().endGame(winner);
+        return;
+      }
+    }
+
     if (
       gameState.gameStatus === 'inProgress' &&
        gameState.lastAttack !== null &&

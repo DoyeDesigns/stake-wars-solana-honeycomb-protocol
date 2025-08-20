@@ -127,6 +127,7 @@ interface OnlineGameStore {
   joinGameRoom: (roomId: string, playerAddress: string | null) => Promise<void>;
   findUserRooms: (playerAddress: string) => Promise<GameRoomDocument[] | null>;
   findOpenGameRoom: (playerAddress: string) => Promise<GameRoomDocument[] | null>;
+  endGame: (winner: 'player1' | 'player2') => void;
   init: (roomId: string) => () => void;
 }
 
@@ -334,20 +335,25 @@ checkDiceRollsAndSetTurn: async () => {
       'gameState.lastAttack': { ability: null, attackingPlayer: null },
     };
  
+    let defendingPlayerNewHealth = gameState[defendingPlayer].currentHealth;
+    let opponentPlayerNewHealth = gameState[opponentPlayer].currentHealth;
+
     switch (defenseType) {
       case 'dodge':
         updateData['gameState.currentTurn'] = defendingPlayer;
+        // No damage taken
         break;
  
       case 'reflect':
-        updateData[`gameState.${opponentPlayer}.currentHealth`] =
-          gameState[opponentPlayer].currentHealth - incomingDamage;
+        opponentPlayerNewHealth = gameState[opponentPlayer].currentHealth - incomingDamage;
+        updateData[`gameState.${opponentPlayer}.currentHealth`] = opponentPlayerNewHealth;
         updateData['gameState.currentTurn'] = opponentPlayer;
         break;
  
       case 'block':
-        updateData[`gameState.${defendingPlayer}.currentHealth`] =
-          gameState[defendingPlayer].currentHealth - Math.max(0, incomingDamage - 25);
+        const blockedDamage = Math.max(0, incomingDamage - 25);
+        defendingPlayerNewHealth = gameState[defendingPlayer].currentHealth - blockedDamage;
+        updateData[`gameState.${defendingPlayer}.currentHealth`] = defendingPlayerNewHealth;
         updateData['gameState.currentTurn'] = opponentPlayer;
         break;
  
@@ -356,20 +362,31 @@ checkDiceRollsAndSetTurn: async () => {
         return false;
     }
  
-    if (gameState[opponentPlayer].currentHealth - (defenseType === 'reflect' ? incomingDamage : 0) <= 0 ||
-        gameState[defendingPlayer].currentHealth -
-        (defenseType === 'block' ? Math.max(0, incomingDamage - 25) :
-         defenseType === 'dodge' ? 0 : incomingDamage) <= 0) {
-      updateData['gameStatus'] = 'finished';
+    // Check for game over conditions
+    if (opponentPlayerNewHealth <= 0) {
+      updateData['gameState.gameStatus'] = 'finished';
+      updateData['status'] = 'finished';
+      updateData['gameState.winner'] = defendingPlayer;
+    } else if (defendingPlayerNewHealth <= 0) {
+      updateData['gameState.gameStatus'] = 'finished';
+      updateData['status'] = 'finished';
+      updateData['gameState.winner'] = opponentPlayer;
     }
-      updateDoc(roomRef, updateData);
-      return true;
+
+    updateDoc(roomRef, updateData);
+    return true;
   },
   
   performAttack: async (attackingPlayer, ability, powerUp) => {
     const { roomId } = get();
     const { gameState } = get();
     if (!roomId) throw new Error('No active game room');
+    
+    // Prevent attacks if game is already finished
+    if (gameState.gameStatus === 'finished') {
+      toast.error('Game is already finished');
+      return;
+    }
   
     const opponentKey = attackingPlayer === 'player1' ? 'player2' : 'player1';
     const roomRef = doc(db, 'gameRooms', roomId);
@@ -512,8 +529,8 @@ checkDiceRollsAndSetTurn: async () => {
       }));
   },
 
-  findUserRooms: async (playerAddress: string) => {
-  
+    findUserRooms: async (playerAddress: string) => {
+   
     if (!playerAddress) {
       throw new Error('User not found');
     }
@@ -534,6 +551,19 @@ checkDiceRollsAndSetTurn: async () => {
     const rooms = querySnapshot.docs.map(doc => doc.data() as GameRoomDocument);
   
     return rooms;
+  },
+
+  endGame: async (winner: 'player1' | 'player2') => {
+    const { roomId } = get();
+    if (!roomId) throw new Error('No active game room');
+
+    const roomRef = doc(db, 'gameRooms', roomId);
+    
+    await updateDoc(roomRef, {
+      'gameState.gameStatus': 'finished',
+      'status': 'finished',
+      'gameState.winner': winner,
+    });
   },
 
   init: (roomId) => {
