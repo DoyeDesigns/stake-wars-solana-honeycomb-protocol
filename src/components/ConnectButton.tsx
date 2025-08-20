@@ -31,51 +31,66 @@ export default function ConnectButton({ width }: ConnectButtonProps) {
   const [hasProfile, setHasProfile] = useState<boolean>(false);
   const [loading, setLoading] = useState(false);
 
-  // Authenticate and fetch user
   useEffect(() => {
-  const fetchUser = async () => {
-    const { user } = await client.findUsers({
-      wallets: [`${wallet.publicKey?.toString()}`],
-      includeProof: true,
-    });
+    const fetchUser = async () => {
+      if (!wallet.publicKey) return;
 
-    console.log("userzz", user)
+      try {
+        const { user } = await client.findUsers({
+          wallets: [wallet.publicKey.toString()],
+          includeProof: true,
+        });
 
-    if (user.length > 0) {
-      setUser(user as unknown as User);                        
-    }
-  };
+        console.log("Found users:", user);
 
-  if (wallet.publicKey) {
+        if (user && user.length > 0) {
+          setUser(user[0] as unknown as User);
+        } else {
+          setUser(null);
+        }
+      } catch (error) {
+        console.error("Error fetching user:", error);
+        setUser(null);
+      }
+    };
+
     fetchUser();
-  }
-}, [wallet.publicKey]);
+  }, [wallet.publicKey?.toString()]); 
 
 useEffect(() => {
   const checkIfUserHasProfile = async () => {
-    if (!user) return;
+    if (!user || !user.id) return;
+
+    // Skip if user already has profiles loaded
+    if (user.profiles && user.profiles.length > 0) {
+      setHasProfile(true);
+      return;
+    }
 
     try {
-      console.log("user.id", user.id)
+      console.log("Fetching profiles for user.id:", user.id);
       const { profile } = await client.findProfiles({
         userIds: [user.id],
         projects: [PROJECT_ADDRESS],
         includeProof: true,
       });
 
-      console.log("profile", profile)
+      console.log("Found profiles:", profile);
 
-       if (!user.profiles || user.profiles.length === 0) {
-      updateUser({ profiles: profile });
-    }
-      setHasProfile(profile.length > 0);
+      if (profile && profile.length > 0) {
+        updateUser({ profiles: profile });
+        setHasProfile(true);
+      } else {
+        setHasProfile(false);
+      }
     } catch (err) {
-      toast.error(`Error checking for profile ${err}`);
+      console.error("Error checking for profile:", err);
+      toast.error(`Error checking for profile: ${err}`);
     }
   };
 
   checkIfUserHasProfile();
-}, [user?.id]);
+}, [user?.id]); // Only depend on user.id, not the entire user object
 
 const authenticateWithEdgeClient = async () => {
   if (!wallet.publicKey) {
