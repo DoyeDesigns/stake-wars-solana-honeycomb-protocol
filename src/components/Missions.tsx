@@ -195,7 +195,7 @@ useEffect(() => {
 
   return (
     <Sheet>
-      <SheetTrigger className="bg-black text-white h-10.5 w-50 border border-[#6B6969] rounded-lg">
+      <SheetTrigger disabled={!character} className="bg-black text-white h-10.5 w-50 border border-[#6B6969] rounded-lg disabled:opacity-50">
         Go on a mission
       </SheetTrigger>
       <SheetContent

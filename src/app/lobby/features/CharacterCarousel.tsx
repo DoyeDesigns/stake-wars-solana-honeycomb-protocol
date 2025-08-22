@@ -23,30 +23,39 @@ interface CharacterCarouselProps {
   isAIGame?: boolean;
 }
 
-export default function CharacterCarousel({ characters, onCharacterSelect, selectedCharacter, isAIGame = false }: CharacterCarouselProps) {
+export default function CharacterCarousel({
+  characters,
+  onCharacterSelect,
+  selectedCharacter: selectedCharacterProp,
+  isAIGame = false,
+}: CharacterCarouselProps) {
   const wallet = useWallet();
   const [active, setActive] = useState(0);
-  // const [createdGameRoom, setCreatedGameRoom] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
-  const { createOnlineGameRoom, joinGameRoom, selectCharacters } = useOnlineGameStore();
+  const { createOnlineGameRoom, joinGameRoom, selectCharacters } =
+    useOnlineGameStore();
   const [roomToJoinId, setRoomToJoinId] = useState<string | null>(null);
+  const [localSelectedCharacter, setLocalSelectedCharacter] = useState<Character | null>(null); 
   const searchParams = useSearchParams();
   const router = useRouter();
 
   useEffect(() => {
-  const gid = searchParams.get("gid");
-  if (gid) {
-    setRoomToJoinId(gid);
-  }
-}, [searchParams]);
+    const gid = searchParams.get("gid");
+    if (gid) {
+      setRoomToJoinId(gid);
+    }
+  }, [searchParams]);
 
   const activeCharacter = characters[active];
 
-  // Handle character selection for AI games
+  const selectedCharacter = isAIGame ? selectedCharacterProp : localSelectedCharacter;
+
   const handleCharacterSelect = () => {
     if (onCharacterSelect && isAIGame) {
       onCharacterSelect(activeCharacter);
+    } else {
+      setLocalSelectedCharacter(activeCharacter);
     }
   };
 
@@ -55,27 +64,37 @@ export default function CharacterCarousel({ characters, onCharacterSelect, selec
       toast.error("Wallet not connected. Connect wallet.");
       return;
     }
+    if (!selectedCharacter) {
+      toast.error("Please select a character first.");
+      return;
+    }
 
     setIsCreating(true);
     try {
-      const roomId = await createOnlineGameRoom(wallet.publicKey?.toString() as string);
+      const roomId = await createOnlineGameRoom(
+        wallet.publicKey?.toString() as string
+      );
 
       if (!roomId) {
         throw new Error("Failed to create game room.");
       }
 
-      selectCharacters(roomId, activeCharacter, wallet.publicKey?.toString() as string, );
+      selectCharacters(
+        roomId,
+        activeCharacter,
+        wallet.publicKey?.toString() as string
+      );
       await joinGameRoom(roomId, wallet.publicKey?.toString() as string);
 
-      router.push(`/game-play/${roomId}`)
+      router.push(`/game-play/${roomId}`);
 
       toast.success("Game room created and joined successfully!");
     } catch (error) {
       if (error instanceof Error) {
-    toast.error(`Caught error ${error.message}`);
-  } else {
-    toast.error(`Caught error ${error}`);
-  }
+        toast.error(`Caught error ${error.message}`);
+      } else {
+        toast.error(`Caught error ${error}`);
+      }
     } finally {
       setIsCreating(false);
     }
@@ -86,6 +105,10 @@ export default function CharacterCarousel({ characters, onCharacterSelect, selec
       toast.error("Wallet not connected. Connect wallet.");
       return;
     }
+    if (!selectedCharacter) {
+      toast.error("Please select a character first.");
+      return;
+    }
 
     setIsJoining(true);
     try {
@@ -93,20 +116,27 @@ export default function CharacterCarousel({ characters, onCharacterSelect, selec
         throw new Error("Failed to join game room.");
       }
 
-      selectCharacters(roomToJoinId, activeCharacter, wallet.publicKey?.toString() as string);
+      selectCharacters(
+        roomToJoinId,
+        activeCharacter,
+        wallet.publicKey?.toString() as string
+      );
       await joinGameRoom(roomToJoinId, wallet.publicKey?.toString() as string);
 
-      router.push(`/game-play/${roomToJoinId}`)
+      router.push(`/game-play/${roomToJoinId}`);
 
       toast.success("Game room joined successfully!");
     } catch (error) {
       if (error instanceof Error) {
-    toast.error(`Caught error ${error.message}` || "Something went wrong while joining the game.");
-  } else {
-    toast.error(`"Unknown error ${error}`);
-  }
+        toast.error(
+          `Caught error ${error.message}` ||
+            "Something went wrong while joining the game."
+        );
+      } else {
+        toast.error(`"Unknown error ${error}`);
+      }
     } finally {
-      setIsCreating(false);
+      setIsJoining(false);
     }
   };
 
@@ -121,136 +151,140 @@ export default function CharacterCarousel({ characters, onCharacterSelect, selec
   return (
     <div>
       <div className="flex flex-col items-center mt-5">
-        <img
-          src="/stake-wars-logo.png"
-          alt="stake wars logo"
-          className="size-[206px] hidden sm:block"
-        />
         <h1 className="font-medium text-lg px-2 md:text-2xl text-center -mt-4 mb-1">
-          {roomToJoinId ? (<span>Join <span className="font-semibold">{roomToJoinId}</span> Game to Battle. Select your character and join the game</span>) : "You're now Combat Ready! Select your character"}
+          {roomToJoinId ? (
+            <span>
+              Join <span className="font-semibold">{roomToJoinId}</span> Game to
+              Battle. Select your character and join the game
+            </span>
+          ) : (
+            "You're now Combat Ready! Select your character"
+          )}
         </h1>
       </div>
 
-      <div className="flex flex-col gap-10 justify-center items-center">
-      <div className="relative w-fit flex justify-center items-center mt-8 overflow-hidden">
-        <div className="md:block absolute left-0 z-50">
-          <button onClick={handlePrev}>
-            <ChevronLeft className="w-8 h-8 text-white" />
-          </button>
-        </div>
-        <div className="md:block absolute right-0 z-50">
-          <button onClick={handleNext}>
-            <ChevronRight className="w-8 h-8 text-white" />
-          </button>
-        </div>
+      <div className="flex flex-col gap-5 justify-center items-center">
+        <div className="relative w-fit flex justify-center items-center mt-8 overflow-hidden">
+          <div className="md:block absolute left-0 z-50">
+            <button onClick={handlePrev}>
+              <ChevronLeft className="w-8 h-8 text-white" />
+            </button>
+          </div>
+          <div className="md:block absolute right-0 z-50">
+            <button onClick={handleNext}>
+              <ChevronRight className="w-8 h-8 text-white" />
+            </button>
+          </div>
 
-        {/* Carousel */}
-        <div className="relative w-[250px] h-[250px] sm:w-[260px] sm:h-[240px] flex justify-center items-center">
-          {characters.map((character, i) => {
-            const offset = i - active;
-            const distance =
-              offset > characters.length / 2
-                ? offset - characters.length
-                : offset < -characters.length / 2
-                ? offset + characters.length
-                : offset;
+          {/* Carousel */}
+          <div className="relative w-[250px] h-[250px] sm:w-[260px] sm:h-[240px] flex justify-center items-center">
+            {characters.map((character, i) => {
+              const offset = i - active;
+              const distance =
+                offset > characters.length / 2
+                  ? offset - characters.length
+                  : offset < -characters.length / 2
+                  ? offset + characters.length
+                  : offset;
 
-            const isActive = distance === 0;
+              const isActive = distance === 0;
 
-            if (Math.abs(distance) > MAX_VISIBILITY) return null;
+              if (Math.abs(distance) > MAX_VISIBILITY) return null;
 
-            return (
-              <div key={i} className="border-4 border-black rounded-md overflow-hidden">
-                <motion.div
-                  className={`absolute top-0 left-1/2 transform -translate-x-1/2 rounded-xl ${
-                    isActive ? "z-30" : "z-20"
-                  }`}
-                  style={{
-                    width: `${CARD_WIDTH}px`,
-                    scale: isActive ? 1 : 0.8,
-                    opacity: isActive ? 1 : 0.4,
-                    x: distance * CARD_OFFSET,
-                    filter: isActive ? "none" : "blur(4px)",
-                  }}
-                  animate={{
-                    x: distance * CARD_OFFSET,
-                    scale: isActive ? 1 : 0.9,
-                    opacity: isActive ? 1 : 0.4,
-                    filter: isActive ? "blur(0px)" : "blur(4px)",
-                  }}
-                  transition={{ type: "spring", stiffness: 300, damping: 30 }}
+              return (
+                <div
+                  key={i}
+                  className="border-4 border-black rounded-md overflow-hidden"
                 >
-                  <img
-                    src={`/characters/${character.id}.png`}
-                    alt={character.nickname}
-                    className="rounded-xl w-full h-full object-contain"
-                  />
-                  {isAIGame && (
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      {selectedCharacter?.id === character.id && (
+                  <motion.div
+                    className={`absolute top-0 left-1/2 transform -translate-x-1/2 rounded-xl ${
+                      isActive ? "z-30" : "z-20"
+                    }`}
+                    style={{
+                      width: `${CARD_WIDTH}px`,
+                      scale: isActive ? 1 : 0.8,
+                      opacity: isActive ? 1 : 0.4,
+                      x: distance * CARD_OFFSET,
+                      filter: isActive ? "none" : "blur(4px)",
+                    }}
+                    animate={{
+                      x: distance * CARD_OFFSET,
+                      scale: isActive ? 1 : 0.9,
+                      opacity: isActive ? 1 : 0.4,
+                      filter: isActive ? "blur(0px)" : "blur(4px)",
+                    }}
+                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                  >
+                    <img
+                      src={`/characters/${character.id}.png`}
+                      alt={character.nickname}
+                      className="rounded-xl w-full h-full object-contain"
+                    />
+                    {selectedCharacter?.id === character.id && (
+                      <div className="absolute inset-0 flex items-center justify-center">
                         <div className="bg-green-500 text-white px-2 py-1 rounded-full text-xs font-bold">
                           SELECTED
                         </div>
-                      )}
-                    </div>
-                  )}
-                </motion.div>
-              </div>
-            );
-          })}
+                      </div>
+                    )}
+                  </motion.div>
+                </div>
+              );
+            })}
+          </div>
         </div>
-      </div>
 
-      <div className="flex flex-wrap justify-center gap-3 pb-20 sm:pb-30">
-        {!isAIGame && <Missions character={activeCharacter} />}
-
-        {isAIGame ? (
+        <div className="flex flex-col gap-5 items-center pb-5">
           <Button
-            className="connect-button-bg h-10.5 w-[140px] border border-[#FFFFFF] rounded-lg"
+            className="connect-button-bg h-10.5 w-[160px] border border-[#FFFFFF] rounded-lg"
             onClick={handleCharacterSelect}
-            disabled={!activeCharacter}
           >
             Select Character
           </Button>
-        ) : (
-          <>
-            {roomToJoinId ? (
-              <motion.div
-                animate={{
-                  scale: [1, 1.05, 1],
-                  boxShadow: [
-                    "0 0 0 rgba(255, 255, 255, 0)",
-                    "0 0 20px rgba(255, 255, 255, 0.5)",
-                    "0 0 0 rgba(255, 255, 255, 0)"
-                  ]
-                }}
-                transition={{
-                  duration: 1.5,
-                  repeat: Infinity,
-                  ease: "easeInOut"
-                }}
-              >
-                <Button
-                  className="connect-button-bg h-10.5 w-[200px] border-2 border-[#FFD95E] rounded-lg font-bold text-lg"
-                  onClick={joinGame}
-                  disabled={isJoining}
-                >
-                  {isJoining ? "Joining..." : `Join Game`}
-                </Button>
-              </motion.div>
-            ) : (
-              <Button
-                className="connect-button-bg h-10.2 w-[140px] border border-[#FFFFFF] rounded-lg"
-                onClick={createGame}
-                disabled={isCreating}
-              >
-                {isCreating ? "Creating..." : "Create a game"}
-              </Button>
+
+          <div className="flex items-center gap-5">
+            {!isAIGame && <Missions character={selectedCharacter as Character} />}
+
+            {isAIGame ? null : (
+              <>
+                {roomToJoinId ? (
+                  <motion.div
+                    animate={{
+                      scale: [1, 1.05, 1],
+                      boxShadow: [
+                        "0 0 0 rgba(255, 255, 255, 0)",
+                        "0 0 20px rgba(255, 255, 255, 0.5)",
+                        "0 0 0 rgba(255, 255, 255, 0)",
+                      ],
+                    }}
+                    transition={{
+                      duration: 1.5,
+                      repeat: Infinity,
+                      ease: "easeInOut",
+                    }}
+                  >
+                    <Button
+                      className="connect-button-bg h-10.5 w-[200px] border-2 border-[#FFD95E] rounded-lg font-bold text-lg"
+                      onClick={joinGame}
+                      disabled={isJoining || !selectedCharacter}
+                    >
+                      {isJoining ? "Joining..." : `Join Game`}
+                    </Button>
+                  </motion.div>
+                ) : (
+                  <Button
+                    className="connect-button-bg h-10.2 w-[160px] border border-[#FFFFFF] rounded-lg"
+                    onClick={createGame}
+                    disabled={isCreating || !selectedCharacter} // ✅ disabled if no character selected
+                  >
+                    {isCreating ? "Creating..." : "Create a game"}
+                  </Button>
+                )}
+              </>
             )}
-          </>
-        )}
+          </div>
+        </div>
       </div>
-    </div>
     </div>
   );
 }
