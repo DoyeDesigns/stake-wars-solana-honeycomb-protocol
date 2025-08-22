@@ -33,7 +33,7 @@ export default function PlayerHealth({
 
   return (
     <div>
-      <div className="bg-[#3F3F3F] bg-cover min-h-[129px] lg:h-[267px] rounded-[5px] lg:rounded-[10px] flex justify-between gap-8 items-center px-6 w-full overflow-auto">
+      <div className="bg-[#3F3F3F] bg-cover min-h-[129px] lg:h-[267px] rounded-[5px] lg:rounded-[10px] flex justify-between gap-8 items-center px-6 py-2 w-full overflow-auto">
       <div
         className={`flex flex-col rounded-[6px] relative justify-end items-center w-[63px] lg:w-[132px] h-[97px] lg:h-[195px] p-4 overflow-hidden outline-1 outline-[#E8E8E8] outline-offset-[6px] shadow-[0px_4px_7.2px_3px_rgba(191,229,40,0.39)]`}
       >

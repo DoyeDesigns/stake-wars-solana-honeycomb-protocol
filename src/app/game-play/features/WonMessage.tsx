@@ -10,7 +10,7 @@ import { useUserStore } from "@/store/useUser";
 export default function WonMessage() {
   const router = useRouter();
   const wallet = useWallet();
-  const { user } = useUserStore();
+  const { user, refreshUser } = useUserStore();
   const [isClaiming, setIsClaiming] = useState(false);
   const [hasClaimed, setHasClaimed] = useState(false);
 
@@ -42,7 +42,7 @@ export default function WonMessage() {
            },
            body: JSON.stringify({
              profileAddress: profileAddress,
-             xpAmount: 20,
+             xpAmount: 10,
            }),
          });
 
@@ -55,7 +55,7 @@ export default function WonMessage() {
          const claimData = await claimResponse.json();
          
          if (claimData.transactionResult && claimData.transactionResult.status === "Success") {
-           toast.success("Successfully claimed 20 XP!");
+           toast.success(`Successfully claimed 10 XP! ${claimData.transactionResult.signature}`);
            setHasClaimed(true);
          } else {
            throw new Error("XP claim transaction failed");
@@ -68,7 +68,7 @@ export default function WonMessage() {
            },
            body: JSON.stringify({
              walletPublicKey: wallet.publicKey.toString(),
-             amount: 500,
+             amount: 50,
            }),
          });
 
@@ -81,11 +81,12 @@ export default function WonMessage() {
          const mintData = await mintResponse.json();
          
          if (mintData.transactionResult && mintData.transactionResult.status === "Success") {
-           toast.success("Successfully claimed 500 Chakra!");
+           toast.success(`Successfully claimed 50 Chakra! ${mintData.transactionResult.signature}`);
            router.push("/lobby");
          } else {
            throw new Error("Chakra mint transaction failed");
          }
+         refreshUser();
       } catch (error) {
         toast.error(`Error Claiming Rewards: ${error instanceof Error ? error.message : 'Unknown error'}`);
         return;
@@ -132,7 +133,7 @@ export default function WonMessage() {
               disabled={isClaiming || hasClaimed}
               className="border-none connect-button-bg text-white bg-[#B91770] hover:bg-[#B91770]/80 cursor-pointer font-bold text-[12px] w-[190px] h-[38px] rounded-[4px]"
             >
-              {isClaiming ? "Claiming..." : hasClaimed ? "Claimed!" : "Claim 20 XP + 500 Resources"}
+              {isClaiming ? "Claiming..." : hasClaimed ? "Claimed!" : "Claim 10 XP + 50 Chakra"}
             </Button>
           </div>
         </div>

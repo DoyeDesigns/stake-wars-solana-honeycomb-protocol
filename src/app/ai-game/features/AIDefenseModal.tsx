@@ -6,14 +6,12 @@ import { Button } from '@/components/ui/button';
 
 interface AIDefenseModalProps {
   player: 'player' | 'ai';
-  onClose: () => void;
   onDefenseSelect: (defenseType: string | null) => void;
   showSkipButton?: boolean;
 }
 
 const AIDefenseModal: React.FC<AIDefenseModalProps> = ({
   player,
-  onClose,
   onDefenseSelect,
   showSkipButton = false,
 }) => {
@@ -72,13 +70,6 @@ const AIDefenseModal: React.FC<AIDefenseModalProps> = ({
             Skip Defense (Take Damage)
           </Button>
         )}
-
-        <Button
-          onClick={onClose}
-          className="mt-4 bg-gray-300 cursor-pointer text-gray-700 px-4 py-2 rounded hover:bg-gray-400"
-        >
-          Close
-        </Button>
       </div>
     </div>
   );

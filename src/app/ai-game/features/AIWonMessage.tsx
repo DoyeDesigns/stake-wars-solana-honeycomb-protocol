@@ -4,6 +4,7 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import { useUserStore } from '@/store/useUser';
 import { toast } from 'react-toastify';
 import { useRouter } from 'next/navigation';
+import useAIGameStore from '@/store/useAIGame';
 
 const PROJECT_ADDRESS = process.env.PROJECT_ADDRESS as string;
 
@@ -12,6 +13,7 @@ const AIWonMessage: React.FC = () => {
   const wallet = useWallet();
   const { user, refreshUser } = useUserStore();
   const router = useRouter();
+  const { reset } = useAIGameStore();
   const [isClaiming, setIsClaiming] = useState(false);
   const [hasClaimed, setHasClaimed] = useState(false);
 
@@ -53,7 +55,7 @@ const AIWonMessage: React.FC = () => {
       const claimData = await claimResponse.json();
       
       if (claimData.transactionResult && claimData.transactionResult.status === "Success") {
-        toast.success("Successfully claimed 50 XP!");
+        toast.success(`Successfully claimed 50 XP! ${claimData.transactionResult.signature}`);
         setHasClaimed(true);
         await refreshUser();
       } else {
@@ -68,6 +70,7 @@ const AIWonMessage: React.FC = () => {
   };
 
   const handleBackToLobby = () => {
+    reset();
     router.push('/lobby');
   };
 

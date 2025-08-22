@@ -25,7 +25,7 @@ const adminKeypair = Keypair.fromSecretKey(
 
 export async function POST(request: NextRequest) {
   try {
-    const { amount } = await request.json();
+    const { amount, walletAddress } = await request.json();
 
     if (!amount || amount <= 0) {
       return NextResponse.json(
@@ -39,6 +39,7 @@ export async function POST(request: NextRequest) {
       resource: CHAKRA_RESOURCE_ADDRESS,
       amount: amount.toString(),
       payer: adminKeypair.publicKey.toString(),
+      owner: walletAddress
     });
 
     const response = await sendTransaction(

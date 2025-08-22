@@ -10,6 +10,7 @@ import { Button } from './ui/button';
 import { buffs } from '@/lib/buffs';
 import useOnlineGameStore from '@/store/useOnlineGame';
 import { usePathname } from 'next/navigation';
+import { useUserStore } from '@/store/useUser';
 
 const CHAKRA_RESOURCE_TREE_ADDRESS = process.env.CHAKRA_RESOURCE_TREE_ADDRESS as string
 
@@ -19,6 +20,7 @@ export default function Marketplace() {
     const wallet = useWallet();
     const { addBuffToPlayer, gameState, roomId } = useOnlineGameStore();
     const pathname = usePathname();
+    const { refreshUser } = useUserStore();
 
     const currentPlayer = (() => {
       if (gameState?.gameStatus !== 'inProgress') return null;
@@ -33,13 +35,14 @@ export default function Marketplace() {
 
 
     useEffect(() => {
-      if (wallet.connected) {
+      if (wallet.publicKey) {
         fetchResourcesBalance();
+        refreshUser()
       }
-    }, [wallet.connected]);
+    }, [wallet.publicKey]);
 
     const fetchResourcesBalance = async () => {
-      if (!wallet.connected) {
+      if (!wallet.publicKey) {
         toast.error("Please connect wallet to view resources balance.");
         return
       }
@@ -66,6 +69,7 @@ export default function Marketplace() {
              },
              body: JSON.stringify({
                amount: powerUp.price,
+               walletAddress: wallet.publicKey.toString()
              }),
            });
 
@@ -76,10 +80,12 @@ export default function Marketplace() {
           }
 
           const burnData = await burnResponse.json();
+          console.log(burnData)
           
           if (burnData.transactionResult && burnData.transactionResult.status === "Success") {
             addBuffToPlayer(currentPlayer as 'player1' | 'player2', powerUp.name, powerUp.effect, powerUp.remainingTurns)
             fetchResourcesBalance()
+            refreshUser();
             toast.success(`Successfully bought ${powerUp.name}. Power up now equipped!`)
             setIsOpen(false);
           } else {

@@ -9,6 +9,7 @@ import CharacterCarousel from "./features/CharacterCarousel";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
+import { MoonLoader } from "react-spinners";
 
 export type PartialCharacter = {
   address: string;
@@ -69,9 +70,9 @@ export default function Lobby() {
 
   return (
     <div>
-      <Suspense fallback={<div>Loading carousel...</div>}>
+      <Suspense fallback={<div className="p-4"><MoonLoader size={30} /></div>}>
         {characterAbilities.length > 0 ? (
-          <div className="space-y-6">
+          <div className="space-y-10">
             <div className="flex justify-center gap-4">
               <Button 
                 onClick={() => router.push('/ai-game')}
@@ -83,7 +84,8 @@ export default function Lobby() {
             <CharacterCarousel characters={characterAbilities} />
           </div>
         ) : (
-          <div className="flex justify-center items-center h-full w-full">
+          <div className="flex flex-col justify-center text-center px-2 gap-2 items-center h-full w-full">
+            <p>You do not have a character, click the button to mint a character</p>
             <Button 
               className="border-none connect-button-bg my-10 text-white bg-[#B91770] hover:bg-[#B91770]/80 cursor-pointer font-bold text-[12px] w-fit h-[38px] rounded-[4px]" 
               onClick={() => router.push('/mint-character')}

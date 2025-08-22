@@ -58,9 +58,9 @@ export default function AIGameplay() {
 
   // Auto-trigger AI turn when it's AI's turn
   useEffect(() => {
-    console.log('Turn changed:', { currentTurn: gameState.currentTurn, gameStatus: gameState.gameStatus });
+    // console.log('Turn changed:', { currentTurn: gameState.currentTurn, gameStatus: gameState.gameStatus });
     if (gameState.currentTurn === 'ai' && gameState.gameStatus === 'inProgress') {
-      console.log('AI turn detected, triggering AI move...');
+      // console.log('AI turn detected, triggering AI move...');
       // Small delay to show the turn change
       setTimeout(() => {
         useAIGameStore.getState().aiMakeMove();
@@ -155,11 +155,6 @@ export default function AIGameplay() {
     router.push('/lobby');
   };
 
-  const handlePlayAgain = () => {
-    reset();
-    router.push('/ai-game');
-  };
-
   return (
     <div className='w-[95%] lg:w-[707px] relative mx-auto lg:px-0'>
         <AIHealth gameState={gameState} />
@@ -210,11 +205,10 @@ export default function AIGameplay() {
       
       <div className={`absolute top-0 w-full ${showDefenseModal || showWinner || showLoser ? 'h-full' : ''}`}>
         {showWinner && <AIWonMessage />}
-        {showLoser && <AILostMessage onPlayAgain={handlePlayAgain} onBackToLobby={handleBackToLobby} />}
+        {showLoser && <AILostMessage onBackToLobby={handleBackToLobby} />}
         {showDefenseModal && defendingPlayer === gameState.currentTurn && (
           <AIDefenseModal
             player={defendingPlayer as 'player' | 'ai'}
-            onClose={() => setShowDefenseModal(false)}
             onDefenseSelect={handleDefenseSelection}
             showSkipButton={showSkipDefenseButton}
           />

@@ -10,7 +10,7 @@ import { useUserStore } from '@/store/useUser';
 export default function LostMessage() {
   const router = useRouter();
   const wallet = useWallet();
-  const { user } = useUserStore();
+  const { user, refreshUser } = useUserStore();
   const [isClaiming, setIsClaiming] = useState(false);
   const [hasClaimed, setHasClaimed] = useState(false);
 
@@ -55,7 +55,7 @@ export default function LostMessage() {
            const claimData = await claimResponse.json();
            
            if (claimData.transactionResult && claimData.transactionResult.status === "Success") {
-            toast.success("Successfully claimed 5 XP!");
+            toast.success(`Successfully claimed 5 XP! ${claimData.transactionResult.signature}`);
             setHasClaimed(true);
            } else {
             throw new Error('XP claim transaction failed');
@@ -68,7 +68,7 @@ export default function LostMessage() {
              },
              body: JSON.stringify({
                walletPublicKey: wallet.publicKey.toString(),
-               amount: 200,
+               amount: 20,
              }),
            });
 
@@ -81,11 +81,12 @@ export default function LostMessage() {
            const mintData = await mintResponse.json();
            
            if (mintData.transactionResult && mintData.transactionResult.status === "Success") {
-            toast.success("Successfully claimed 200 Chakra!");
+            toast.success(`Successfully claimed 20 Chakra! ${mintData.transactionResult.signature}`);
             router.push("/lobby")
            } else {
             throw new Error('Chakra mint transaction failed');
            }
+           refreshUser();
         } catch (error) {
           toast.error(`Error Claiming Rewards: ${error instanceof Error ? error.message : 'Unknown error'}`);
           return;
@@ -136,7 +137,7 @@ export default function LostMessage() {
             disabled={isClaiming || hasClaimed}
             className="border-none connect-button-bg text-white bg-[#B91770] hover:bg-[#B91770]/80 cursor-pointer font-bold text-[12px] w-[190px] h-[38px] rounded-[4px]"
           >
-            {isClaiming ? "Claiming..." : hasClaimed ? "Claimed!" : "Claim 5 XP + 200 Resources"}
+            {isClaiming ? "Claiming..." : hasClaimed ? "Claimed!" : "Claim 5 XP + 20 Chakra"}
           </Button>
         </div>
       </div>

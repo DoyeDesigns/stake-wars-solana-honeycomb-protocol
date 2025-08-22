@@ -78,8 +78,7 @@ export default function NinjaRanks() {
       const updateData = await updateResponse.json();
       
              if (updateData.transactionResult && updateData.transactionResult.status === "Success") {
-         toast.success("Successfully claimed badge!");
-         // Refresh user data to get updated achievements
+         toast.success(`Successfully claimed badge! ${updateData.transactionResult.signature}`);
          await refreshUser();
        } else {
          toast.error("Transaction failed");
@@ -140,22 +139,22 @@ export default function NinjaRanks() {
               </span>
             </div>
 
-                         <Progress 
-               value={hasBadge ? 100 : progress} 
-               className={`h-2 ${hasBadge || hasReached ? 'bg-green-600 dark:bg-green-600' : ''}`} 
-             />
+            <Progress
+              value={hasBadge ? 100 : progress}
+              className={`h-2 ${hasBadge || hasReached ? "bg-[#BFE528] lg:bg-linear-65 from-[#B91770] to-[#3B74B8]" : ""}`}
+            />
 
-                         <Button
-               onClick={() => canClaim && claimBadge(index)}
-               disabled={hasBadge || !canClaim}
-               className={`mt-4 w-full font-bold py-2 rounded transition ${
-                 hasBadge
-                   ? "bg-green-600 text-white cursor-not-allowed"
-                   : canClaim
-                   ? "bg-[#FFCE31] text-black hover:bg-[#FFD95E]"
-                   : "bg-gray-600 text-gray-300 cursor-not-allowed"
-               }`}
-             >
+            <Button
+              onClick={() => canClaim && claimBadge(index)}
+              disabled={hasBadge || !canClaim}
+              className={`mt-4 w-full font-bold py-2 rounded transition ${
+                hasBadge
+                  ? "bg-green-600 text-white cursor-not-allowed"
+                  : canClaim
+                  ? "bg-[#FFCE31] text-black hover:bg-[#FFD95E]"
+                  : "bg-gray-600 text-gray-300 cursor-not-allowed"
+              }`}
+            >
               {hasBadge
                 ? "✅ Badge Claimed"
                 : canClaim

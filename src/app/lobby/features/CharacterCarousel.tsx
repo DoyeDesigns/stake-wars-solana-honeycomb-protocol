@@ -40,6 +40,8 @@ export default function CharacterCarousel({
   const searchParams = useSearchParams();
   const router = useRouter();
 
+  console.log("localSelectedCharacter", localSelectedCharacter)
+
   useEffect(() => {
     const gid = searchParams.get("gid");
     if (gid) {
@@ -242,7 +244,7 @@ export default function CharacterCarousel({
             Select Character
           </Button>
 
-          <div className="flex items-center gap-5">
+          <div className="flex items-center gap-5 pb-12 sm:pb-5">
             {!isAIGame && <Missions character={selectedCharacter as Character} />}
 
             {isAIGame ? null : (
@@ -275,7 +277,7 @@ export default function CharacterCarousel({
                   <Button
                     className="connect-button-bg h-10.2 w-[160px] border border-[#FFFFFF] rounded-lg"
                     onClick={createGame}
-                    disabled={isCreating || !selectedCharacter} // ✅ disabled if no character selected
+                    disabled={isCreating || !selectedCharacter}
                   >
                     {isCreating ? "Creating..." : "Create a game"}
                   </Button>

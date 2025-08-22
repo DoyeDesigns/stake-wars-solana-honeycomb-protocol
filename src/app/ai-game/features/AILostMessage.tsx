@@ -2,11 +2,10 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 
 interface AILostMessageProps {
-  onPlayAgain: () => void;
   onBackToLobby: () => void;
 }
 
-const AILostMessage: React.FC<AILostMessageProps> = ({ onPlayAgain, onBackToLobby }) => {
+const AILostMessage: React.FC<AILostMessageProps> = ({ onBackToLobby }) => {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-[#3F3F3F] rounded-[20px] p-8 max-w-md w-full mx-4 text-center">
@@ -24,12 +23,6 @@ const AILostMessage: React.FC<AILostMessageProps> = ({ onPlayAgain, onBackToLobb
         </div>
         
         <div className="flex flex-col space-y-3">
-          <Button
-            onClick={onPlayAgain}
-            className="bg-[#B91770] hover:bg-[#B91770]/80 text-white font-bold py-3 px-6 rounded-lg"
-          >
-            Try Again
-          </Button>
           <Button
             onClick={onBackToLobby}
             variant="outline"
