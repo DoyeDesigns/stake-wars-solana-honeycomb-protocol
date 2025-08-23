@@ -634,7 +634,7 @@ const useAIGameStore = create<AIGameStore>((set, get) => ({
         
         console.log(`Player earned ${xpReward} XP for defeating AI`);
       } catch (error) {
-        // console.error('Failed to record XP on-chain:', error);
+        console.error('Failed to record XP on-chain:', error);
         // Still show success message even if on-chain recording fails
       }
     }

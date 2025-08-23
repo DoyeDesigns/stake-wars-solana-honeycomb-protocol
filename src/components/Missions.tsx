@@ -42,8 +42,8 @@ type SelectedCharacter = {
 };
 
 const hardcodedMissions = [
-  { id: "mission1", name: "Defend the Village", difficulty: "Easy", reward: 200, duration: 60, claimed: false, missionPubkey: "Dn8DjQgh1dJFem4tYEUjTeaxagRumMt7nj36JKcpVHm7"},
-  { id: "mission2", name: "Gather Intelligence", difficulty: "Medium", reward: 500, duration: 120, claimed: false, missionPubkey: "Dn8DjQgh1dJFem4tYEUjTeaxagRumMt7nj36JKcpVHm7"}
+  { id: "mission1", name: "Defend the Village", difficulty: "Easy", reward: 25, duration: 43200, claimed: false, missionPubkey: "Dn8DjQgh1dJFem4tYEUjTeaxagRumMt7nj36JKcpVHm7"},
+  { id: "mission2", name: "Gather Intelligence", difficulty: "Medium", reward: 50, duration: 86400, claimed: false, missionPubkey: "Dn8DjQgh1dJFem4tYEUjTeaxagRumMt7nj36JKcpVHm7"}
 ];
 
 const PROJECT_ADDRESS = process.env.PROJECT_ADDRESS as string;
