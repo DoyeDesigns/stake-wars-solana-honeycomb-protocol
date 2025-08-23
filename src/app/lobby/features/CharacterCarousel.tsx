@@ -40,8 +40,6 @@ export default function CharacterCarousel({
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  console.log("localSelectedCharacter", localSelectedCharacter)
-
   useEffect(() => {
     const gid = searchParams.get("gid");
     if (gid) {

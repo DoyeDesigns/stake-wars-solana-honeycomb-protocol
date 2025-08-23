@@ -25,7 +25,7 @@ const UserGameRooms = ({setIsOpen} : GameRoomSearchProps) => {
     "waiting" | "inProgress" | "character-select" | null
   >('inProgress');
 
-  const { joinGameRoom, findUserRooms } = useOnlineGameStore();
+  const { findUserRooms, validatePlayerInRoom } = useOnlineGameStore();
   const router = useRouter();
   const wallet = useWallet();
 
@@ -53,14 +53,14 @@ const UserGameRooms = ({setIsOpen} : GameRoomSearchProps) => {
     fetchUserGameRooms();
   }, [wallet]);
 
-  const handleJoinRoom = async (roomId: string) => {
+  const handleJoinRoom = async (gameRoom: GameRoomDocument) => {
     try {
-      await joinGameRoom(roomId, wallet.publicKey?.toString() as string);
+      validatePlayerInRoom(wallet.publicKey?.toString() as string, gameRoom)
+
+      router.push(`/game-play/${gameRoom.id}`);
+      setIsOpen(false)
     } catch (err) {
       setError(`Failed to join game room. ${err}`);
-    } finally {
-      router.push(`/game-play/${roomId}`);
-      setIsOpen(false)
     }
   };
 
@@ -171,7 +171,7 @@ const UserGameRooms = ({setIsOpen} : GameRoomSearchProps) => {
             </div>
             <div className="flex justify-center lg:justify-end mt-4">
               <Button
-                onClick={() => handleJoinRoom(gameRoom.id)}
+                onClick={() => handleJoinRoom(gameRoom)}
                 className="bg-[#34681C] text-[12px] lg:text-base cursor-pointer disabled:bg-[#34681C]/80 rounded-[10px] h-11 text-white font-bold border-none"
               >
                 Join Room

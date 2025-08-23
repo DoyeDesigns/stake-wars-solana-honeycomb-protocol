@@ -127,6 +127,7 @@ interface OnlineGameStore {
   joinGameRoom: (roomId: string, playerAddress: string | null) => Promise<void>;
   findUserRooms: (playerAddress: string) => Promise<GameRoomDocument[] | null>;
   findOpenGameRoom: (playerAddress: string) => Promise<GameRoomDocument[] | null>;
+  validatePlayerInRoom: (playerAddress: string, roomData: GameRoomDocument) => void;
   endGame: (winner: 'player1' | 'player2') => void;
   init: (roomId: string) => () => void;
 }
@@ -134,9 +135,9 @@ interface OnlineGameStore {
 const useOnlineGameStore = create<OnlineGameStore>((set, get) => ({
   roomId: null,
   setRoomId: (roomId: string, address: string) => {
-    set({ 
+    set({
       roomId: roomId,
-      playerAddress: address
+      playerAddress: address,
     });
   },
   reset: () => set({ gameState: initialGameState, roomId: null }),
@@ -146,250 +147,266 @@ const useOnlineGameStore = create<OnlineGameStore>((set, get) => ({
   rollAndRecordDice: async () => {
     const { roomId, playerAddress } = get();
     if (!roomId || !playerAddress) {
-      throw new Error('No active game room');
+      throw new Error("No active game room");
     }
-  
+
     const diceRoll = Math.floor(Math.random() * 6) + 1;
-    const roomRef = doc(db, 'gameRooms', roomId);
-  
+    const roomRef = doc(db, "gameRooms", roomId);
+
     updateDoc(roomRef, {
       [`players.${playerAddress}.diceRoll`]: diceRoll,
-      [`gameState.diceRolls.${playerAddress}`]: diceRoll
+      [`gameState.diceRolls.${playerAddress}`]: diceRoll,
     });
-  
+
     return diceRoll;
   },
 
-checkDiceRollsAndSetTurn: async () => {
-  const { roomId } = get();
-  if (!roomId) return;
+  checkDiceRollsAndSetTurn: async () => {
+    const { roomId } = get();
+    if (!roomId) return;
 
-  const roomRef = doc(db, 'gameRooms', roomId);
-  const roomSnapshot = await getDoc(roomRef);
-  const roomData = roomSnapshot.data() as GameRoomDocument;
+    const roomRef = doc(db, "gameRooms", roomId);
+    const roomSnapshot = await getDoc(roomRef);
+    const roomData = roomSnapshot.data() as GameRoomDocument;
 
-  if (!roomData) throw new Error('Room not found');
+    if (!roomData) throw new Error("Room not found");
 
-  const { players, gameState } = roomData;
-  if (!players || !gameState?.diceRolls) {
-    toast.error('Players or dice rolls are missing.');
-    return;
-  }
-
-  const diceRolls = gameState.diceRolls;
-  const playerIds = Object.keys(players);
-
-  if (
-    playerIds.length !== 2 ||
-    playerIds.some((id) => diceRolls[id] === undefined)
-  ) {
-    toast.error('Not all players have rolled their dice.');
-    return;
-  }
-
-  const creatorId = roomData.createdBy;
-  const joinerId = playerIds.find(id => id !== creatorId);
-  
-  if (!joinerId) {
-    toast.error('Could not determine both players.');
-    return;
-  }
-
-  const playerRoles = {
-    player1: { id: creatorId, roll: gameState.diceRolls[creatorId] },
-    player2: { id: joinerId, roll: gameState.diceRolls[joinerId] },
-  };
-
-  const firstPlayer =
-    playerRoles.player1.roll > playerRoles.player2.roll
-      ? 'player1'
-      : 'player2';
-
-  updateDoc(roomRef, {
-    'gameState.currentTurn': firstPlayer,
-    'gameState.gameStatus': 'inProgress',
-    'status': 'inProgress',
-  });
-},
-
-
-  selectCharacters: async (roomId: string, character: Character, playerAddress: string) => {
-    if (!playerAddress) {
-      throw new Error('User not found');
+    const { players, gameState } = roomData;
+    if (!players || !gameState?.diceRolls) {
+      toast.error("Players or dice rolls are missing.");
+      return;
     }
 
-    if (!character) throw new Error('Invalid character ID');
-  
-    const roomRef = doc(db, 'gameRooms', roomId);
-    // const playerCharacter = CHARACTERS.find((char) => char.id === characterId);
-    
-  
-    const gameRoomDoc = await getDoc(roomRef);
-  
-    if (!gameRoomDoc.exists()) throw new Error('Game room not found');
-  
-    const isPlayer1 = gameRoomDoc.data()?.createdBy === playerAddress;
-  
-    const existingCharacterId = gameRoomDoc.data()?.players?.[playerAddress]?.characterId;
-    if (existingCharacterId) {
-      throw new Error('Character already selected');
+    const diceRolls = gameState.diceRolls;
+    const playerIds = Object.keys(players);
+
+    if (
+      playerIds.length !== 2 ||
+      playerIds.some((id) => diceRolls[id] === undefined)
+    ) {
+      toast.error("Not all players have rolled their dice.");
+      return;
     }
-  
-  updateDoc(roomRef, {
-    [`players.${playerAddress}.characterId`]: character.id,
-    [`gameState.${isPlayer1 ? 'player1' : 'player2'}.character`]: character,
-    [`gameState.${isPlayer1 ? 'player1' : 'player2'}.currentHealth`]: character.baseHealth,
-    [`gameState.${isPlayer1 ? 'player1' : 'player2'}.id`]: playerAddress,
-    [`gameState.gameStatus`]: 'character-select',
-    'status': 'character-select'
-  });
-  },
 
+    const creatorId = roomData.createdBy;
+    const joinerId = playerIds.find((id) => id !== creatorId);
 
-  addDefenseToInventory: async (player, defenseType) => {
-    const { roomId, gameState } = get();
-  
-    if (!roomId) throw new Error('No active game room');
-  
-    const roomRef = doc(db, 'gameRooms', roomId);
-    const nextPlayer = player === 'player1' ? 'player2' : 'player1';
-  
-    const currentDefenseCount = gameState[player]?.defenseInventory?.[defenseType] || 0;
-  
+    if (!joinerId) {
+      toast.error("Could not determine both players.");
+      return;
+    }
+
+    const playerRoles = {
+      player1: { id: creatorId, roll: gameState.diceRolls[creatorId] },
+      player2: { id: joinerId, roll: gameState.diceRolls[joinerId] },
+    };
+
+    const firstPlayer =
+      playerRoles.player1.roll > playerRoles.player2.roll
+        ? "player1"
+        : "player2";
+
     updateDoc(roomRef, {
-      [`gameState.${player}.defenseInventory.${defenseType}`]: currentDefenseCount + 1,
-      'gameState.currentTurn': nextPlayer,
+      "gameState.currentTurn": firstPlayer,
+      "gameState.gameStatus": "inProgress",
+      status: "inProgress",
     });
   },
 
-  addBuffToPlayer: async (player: 'player1' | 'player2', name: string, effect: number, duration: number) => {
-  const { roomId, gameState } = get();
-  if (!roomId) throw new Error('No active game room');
+  selectCharacters: async (
+    roomId: string,
+    character: Character,
+    playerAddress: string
+  ) => {
+    if (!playerAddress) {
+      throw new Error("User not found");
+    }
 
-  const roomRef = doc(db, 'gameRooms', roomId);
-  const currentBuffs = gameState[player]?.activeBuffs || [];
+    if (!character) throw new Error("Invalid character ID");
 
-  const newBuff: Buff = {
-    name,
-    effect,
-    remainingTurns: duration,
-  };
+    const roomRef = doc(db, "gameRooms", roomId);
+    // const playerCharacter = CHARACTERS.find((char) => char.id === characterId);
 
-  await updateDoc(roomRef, {
-    [`gameState.${player}.activeBuffs`]: [...currentBuffs, newBuff],
-  });
-},
+    const gameRoomDoc = await getDoc(roomRef);
 
-  
+    if (!gameRoomDoc.exists()) throw new Error("Game room not found");
+
+    const isPlayer1 = gameRoomDoc.data()?.createdBy === playerAddress;
+
+    const existingCharacterId =
+      gameRoomDoc.data()?.players?.[playerAddress]?.characterId;
+    if (existingCharacterId) {
+      throw new Error("Character already selected");
+    }
+
+    updateDoc(roomRef, {
+      [`players.${playerAddress}.characterId`]: character.id,
+      [`gameState.${isPlayer1 ? "player1" : "player2"}.character`]: character,
+      [`gameState.${isPlayer1 ? "player1" : "player2"}.currentHealth`]:
+        character.baseHealth,
+      [`gameState.${isPlayer1 ? "player1" : "player2"}.id`]: playerAddress,
+      [`gameState.gameStatus`]: "character-select",
+      status: "character-select",
+    });
+  },
+
+  addDefenseToInventory: async (player, defenseType) => {
+    const { roomId, gameState } = get();
+
+    if (!roomId) throw new Error("No active game room");
+
+    const roomRef = doc(db, "gameRooms", roomId);
+    const nextPlayer = player === "player1" ? "player2" : "player1";
+
+    const currentDefenseCount =
+      gameState[player]?.defenseInventory?.[defenseType] || 0;
+
+    updateDoc(roomRef, {
+      [`gameState.${player}.defenseInventory.${defenseType}`]:
+        currentDefenseCount + 1,
+      "gameState.currentTurn": nextPlayer,
+    });
+  },
+
+  addBuffToPlayer: async (
+    player: "player1" | "player2",
+    name: string,
+    effect: number,
+    duration: number
+  ) => {
+    const { roomId, gameState } = get();
+    if (!roomId) throw new Error("No active game room");
+
+    const roomRef = doc(db, "gameRooms", roomId);
+    const currentBuffs = gameState[player]?.activeBuffs || [];
+
+    const newBuff: Buff = {
+      name,
+      effect,
+      remainingTurns: duration,
+    };
+
+    await updateDoc(roomRef, {
+      [`gameState.${player}.activeBuffs`]: [...currentBuffs, newBuff],
+    });
+  },
+
   skipDefense: async (defendingPlayer, incomingDamage, ability) => {
     const { roomId, gameState } = get();
-    if (!roomId) throw new Error('No active game room');
-  
-    const roomRef = doc(db, 'gameRooms', roomId);
-  
-    const opponentPlayer = defendingPlayer === 'player1' ? 'player2' : 'player1'; 
-    
-    const updatedHealth = gameState[defendingPlayer].currentHealth - incomingDamage;
-  
+    if (!roomId) throw new Error("No active game room");
+
+    const roomRef = doc(db, "gameRooms", roomId);
+
+    const opponentPlayer =
+      defendingPlayer === "player1" ? "player2" : "player1";
+
+    const updatedHealth =
+      gameState[defendingPlayer].currentHealth - incomingDamage;
+
     const updateData: UpdateData = {
       [`gameState.${defendingPlayer}.currentHealth`]: updatedHealth,
       [`gameState.${defendingPlayer}.skippedDefense`]: {
         ability,
-        damage: incomingDamage
+        damage: incomingDamage,
       },
-      'gameState.lastAttack': { ability: null, attackingPlayer: null },
-      'gameState.currentTurn': defendingPlayer,
+      "gameState.lastAttack": { ability: null, attackingPlayer: null },
+      "gameState.currentTurn": defendingPlayer,
     };
-  
+
     if (updatedHealth <= 0) {
-      updateData['gameState.gameStatus'] = 'finished';
-      updateData['status'] = 'finished';
-      updateData['gameState.winner'] = opponentPlayer;
+      updateData["gameState.gameStatus"] = "finished";
+      updateData["status"] = "finished";
+      updateData["gameState.winner"] = opponentPlayer;
     }
-  
-      updateDoc(roomRef, updateData);
+
+    updateDoc(roomRef, updateData);
   },
-  
+
   useDefense: async (defendingPlayer, defenseAbility, incomingDamage) => {
     const { roomId, gameState } = get();
-    if (!roomId) throw new Error('No active game room');
- 
+    if (!roomId) throw new Error("No active game room");
+
     if (!defenseAbility?.defenseType) {
-      toast.error('Invalid defense ability provided');
+      toast.error("Invalid defense ability provided");
       return false;
     }
- 
-    const opponentPlayer = defendingPlayer === 'player1' ? 'player2' : 'player1';
+
+    const opponentPlayer =
+      defendingPlayer === "player1" ? "player2" : "player1";
     const defenseType = defenseAbility.defenseType;
- 
+
     if ((gameState[defendingPlayer].defenseInventory[defenseType] || 0) <= 0) {
       return false;
     }
- 
-    const roomRef = doc(db, 'gameRooms', roomId);
- 
+
+    const roomRef = doc(db, "gameRooms", roomId);
+
     const updateData: UpdateData = {
       [`gameState.${defendingPlayer}.defenseInventory.${defenseType}`]:
         (gameState[defendingPlayer].defenseInventory[defenseType] || 1) - 1,
       [`gameState.${defendingPlayer}.skippedDefense`]: null,
-      'gameState.lastAttack': { ability: null, attackingPlayer: null },
+      "gameState.lastAttack": { ability: null, attackingPlayer: null },
     };
- 
+
     let defendingPlayerNewHealth = gameState[defendingPlayer].currentHealth;
     let opponentPlayerNewHealth = gameState[opponentPlayer].currentHealth;
 
     switch (defenseType) {
-      case 'dodge':
-        updateData['gameState.currentTurn'] = defendingPlayer;
+      case "dodge":
+        updateData["gameState.currentTurn"] = defendingPlayer;
         // No damage taken
         break;
- 
-      case 'reflect':
-        opponentPlayerNewHealth = gameState[opponentPlayer].currentHealth - incomingDamage;
-        updateData[`gameState.${opponentPlayer}.currentHealth`] = opponentPlayerNewHealth;
-        updateData['gameState.currentTurn'] = opponentPlayer;
+
+      case "reflect":
+        opponentPlayerNewHealth =
+          gameState[opponentPlayer].currentHealth - incomingDamage;
+        updateData[`gameState.${opponentPlayer}.currentHealth`] =
+          opponentPlayerNewHealth;
+        updateData["gameState.currentTurn"] = opponentPlayer;
         break;
- 
-      case 'block':
+
+      case "block":
         const blockedDamage = Math.max(0, incomingDamage - 25);
-        defendingPlayerNewHealth = gameState[defendingPlayer].currentHealth - blockedDamage;
-        updateData[`gameState.${defendingPlayer}.currentHealth`] = defendingPlayerNewHealth;
-        updateData['gameState.currentTurn'] = opponentPlayer;
+        defendingPlayerNewHealth =
+          gameState[defendingPlayer].currentHealth - blockedDamage;
+        updateData[`gameState.${defendingPlayer}.currentHealth`] =
+          defendingPlayerNewHealth;
+        updateData["gameState.currentTurn"] = opponentPlayer;
         break;
- 
+
       default:
-        toast.error('Unknown defense type');
+        toast.error("Unknown defense type");
         return false;
     }
- 
+
     // Check for game over conditions
     if (opponentPlayerNewHealth <= 0) {
-      updateData['gameState.gameStatus'] = 'finished';
-      updateData['status'] = 'finished';
-      updateData['gameState.winner'] = defendingPlayer;
+      updateData["gameState.gameStatus"] = "finished";
+      updateData["status"] = "finished";
+      updateData["gameState.winner"] = defendingPlayer;
     } else if (defendingPlayerNewHealth <= 0) {
-      updateData['gameState.gameStatus'] = 'finished';
-      updateData['status'] = 'finished';
-      updateData['gameState.winner'] = opponentPlayer;
+      updateData["gameState.gameStatus"] = "finished";
+      updateData["status"] = "finished";
+      updateData["gameState.winner"] = opponentPlayer;
     }
 
     updateDoc(roomRef, updateData);
     return true;
   },
-  
+
   performAttack: async (attackingPlayer, ability, powerUp) => {
     const { roomId } = get();
     const { gameState } = get();
-    if (!roomId) throw new Error('No active game room');
-    
+    if (!roomId) throw new Error("No active game room");
+
     // Prevent attacks if game is already finished
-    if (gameState.gameStatus === 'finished') {
-      toast.error('Game is already finished');
+    if (gameState.gameStatus === "finished") {
+      toast.error("Game is already finished");
       return;
     }
-  
-    const opponentKey = attackingPlayer === 'player1' ? 'player2' : 'player1';
-    const roomRef = doc(db, 'gameRooms', roomId);
+
+    const opponentKey = attackingPlayer === "player1" ? "player2" : "player1";
+    const roomRef = doc(db, "gameRooms", roomId);
 
     if (powerUp) {
       const updatedBuffs = (gameState[attackingPlayer].activeBuffs ?? [])
@@ -400,51 +417,51 @@ checkDiceRollsAndSetTurn: async () => {
         .filter((buff) => buff.remainingTurns > 0);
 
       updateDoc(roomRef, {
-      'gameState.currentTurn': opponentKey,
-      'gameState.lastAttack': { 
-        ability, 
-        attackingPlayer 
-      },
-      [`gameState.${attackingPlayer}.activeBuffs`]: updatedBuffs,
-    });
+        "gameState.currentTurn": opponentKey,
+        "gameState.lastAttack": {
+          ability,
+          attackingPlayer,
+        },
+        [`gameState.${attackingPlayer}.activeBuffs`]: updatedBuffs,
+      });
     } else {
       updateDoc(roomRef, {
-      'gameState.currentTurn': opponentKey,
-      'gameState.lastAttack': { 
-        ability, 
-        attackingPlayer 
-      }
-    });
+        "gameState.currentTurn": opponentKey,
+        "gameState.lastAttack": {
+          ability,
+          attackingPlayer,
+        },
+      });
     }
   },
 
   createOnlineGameRoom: async (playerAddress) => {
     if (!playerAddress) {
-      throw new Error('User not found');
+      throw new Error("User not found");
     }
 
-    const roomRef = doc(collection(db, 'gameRooms'));
+    const roomRef = doc(collection(db, "gameRooms"));
     const roomId = roomRef.id;
 
     await setDoc(roomRef, {
       id: roomId,
       createdBy: playerAddress,
-      status: 'waiting',
+      status: "waiting",
       players: {
         [playerAddress]: {
           characterId: null,
-          role: 'creator',
+          role: "creator",
           diceRoll: null,
           wallet: playerAddress,
-        }
+        },
       },
       createdAt: serverTimestamp(),
       gameState: null,
     });
 
-    set({ 
-      roomId, 
-      playerAddress: playerAddress 
+    set({
+      roomId,
+      playerAddress: playerAddress,
     });
 
     return roomId;
@@ -452,134 +469,163 @@ checkDiceRollsAndSetTurn: async () => {
 
   joinGameRoom: async (roomId, playerAddress) => {
     if (!playerAddress) {
-      throw new Error('User not found');
+      throw new Error("User not found");
     }
-  
-    const roomRef = doc(db, 'gameRooms', roomId);
+
+    const roomRef = doc(db, "gameRooms", roomId);
     const roomSnap = await getDoc(roomRef);
-    
+
     if (!roomSnap.exists()) {
-      throw new Error('Room does not exist');
+      throw new Error("Room does not exist");
     }
-  
+
     const roomData = roomSnap.data();
-    const existingPlayers = roomData.players || {};
-  
-    if (playerAddress === roomData.players[roomData.createdBy]?.wallet && roomData.players[roomData.createdBy]?.role === 'creator') {
-      set({
-        roomId,
-        playerAddress: playerAddress
-      });
-      return
-    } else if (playerAddress === existingPlayers?.[playerAddress]?.wallet && existingPlayers?.[playerAddress]?.role === 'challenger') {
-      set({
-        roomId,
-        playerAddress: playerAddress
-      });
-      return
-    } else {
-      await updateDoc(roomRef, {
-        [`players.${playerAddress}`]: {
-          characterId: null,
-          role: 'challenger',
-          wallet: playerAddress,
-          diceRoll: null,
-        },
-        status: 'character-select'
-      });
-      set({
-        roomId,
-        playerAddress: playerAddress
-      });
+
+    if (roomData.gameState.player1 && roomData.gameState.player2) {
+      throw new Error("Room already has 2 players");
     }
+
+    if (
+      roomData.player1?.gameState?.wallet === playerAddress ||
+      roomData.player2?.gameState?.wallet === playerAddress
+    ) {
+      throw new Error("You are already in this room");
+    }
+
+    await updateDoc(roomRef, {
+      [`players.${playerAddress}`]: {
+        characterId: null,
+        role: "challenger",
+        wallet: playerAddress,
+        diceRoll: null,
+      },
+      status: "character-select",
+    });
+
+    set({
+      roomId,
+      playerAddress: playerAddress,
+    });
+  },
+
+  validatePlayerInRoom(playerAddress, roomData) {
+    const creator = roomData.players?.[roomData.createdBy];
+    const challenger = roomData.players?.[playerAddress];
+
+    const roomId = roomData.id;
+
+    if (
+      creator &&
+      playerAddress === creator.wallet &&
+      creator.role === "creator"
+    ) {
+      set({
+        roomId,
+        playerAddress,
+      });
+      return true;
+    }
+
+    if (
+      challenger &&
+      playerAddress === challenger.wallet &&
+      challenger.role === "challenger"
+    ) {
+      set({
+        roomId,
+        playerAddress,
+      });
+      return true;
+    }
+
+    throw new Error("You are not a participant in this room");
   },
 
   findOpenGameRoom: async (playerAddress: string) => {
-    if (!playerAddress) throw new Error('User not found');
-  
-    const roomsRef = collection(db, 'gameRooms');
+    if (!playerAddress) throw new Error("User not found");
+
+    const roomsRef = collection(db, "gameRooms");
     const querySnapshot = await getDocs(roomsRef);
-    
-    const allRooms = querySnapshot.docs.map(doc => ({
-      ...doc.data() as GameRoomDocument,
-      id: doc.id
+
+    const allRooms = querySnapshot.docs.map((doc) => ({
+      ...(doc.data() as GameRoomDocument),
+      id: doc.id,
     }));
-  
+
     const winCounts = allRooms.reduce((acc, room) => {
-      if (room.status === 'finished' && room.gameState?.winner) {
-        const winnerAddress = room.gameState.winner === 'player1' 
-          ? room.gameState.player1.id 
-          : room.gameState.player2.id;
-        
+      if (room.status === "finished" && room.gameState?.winner) {
+        const winnerAddress =
+          room.gameState.winner === "player1"
+            ? room.gameState.player1.id
+            : room.gameState.player2.id;
+
         if (winnerAddress) {
           acc.set(winnerAddress, (acc.get(winnerAddress) || 0) + 1);
         }
       }
       return acc;
     }, new Map<string, number>());
-  
+
     return allRooms
-      .filter(room => 
-        room.status === 'character-select' && 
-        room.createdBy !== playerAddress
+      .filter(
+        (room) =>
+          room.status === "character-select" && room.createdBy !== playerAddress
       )
-      .map(room => ({
+      .map((room) => ({
         ...room,
         creatorTotalWins: winCounts.get(room.createdBy) || 0,
       }));
   },
 
-    findUserRooms: async (playerAddress: string) => {
-   
+  findUserRooms: async (playerAddress: string) => {
     if (!playerAddress) {
-      throw new Error('User not found');
+      throw new Error("User not found");
     }
-  
-    const roomsRef = collection(db, 'gameRooms');
-    
-    const q = query(
-      roomsRef,
-      where('players.' + playerAddress, '!=', null) 
-    );
-  
+
+    const roomsRef = collection(db, "gameRooms");
+
+    const q = query(roomsRef, where("players." + playerAddress, "!=", null));
+
     const querySnapshot = await getDocs(q);
-  
+
     if (querySnapshot.empty) {
       return null;
     }
-  
-    const rooms = querySnapshot.docs.map(doc => doc.data() as GameRoomDocument);
-  
+
+    const rooms = querySnapshot.docs.map(
+      (doc) => doc.data() as GameRoomDocument
+    );
+
     return rooms;
   },
 
-  endGame: async (winner: 'player1' | 'player2') => {
+  endGame: async (winner: "player1" | "player2") => {
     const { roomId } = get();
-    if (!roomId) throw new Error('No active game room');
+    if (!roomId) throw new Error("No active game room");
 
-    const roomRef = doc(db, 'gameRooms', roomId);
-    
+    const roomRef = doc(db, "gameRooms", roomId);
+
     await updateDoc(roomRef, {
-      'gameState.gameStatus': 'finished',
-      'status': 'finished',
-      'gameState.winner': winner,
+      "gameState.gameStatus": "finished",
+      status: "finished",
+      "gameState.winner": winner,
     });
   },
 
   init: (roomId) => {
-    const roomRef = doc(db, 'gameRooms', roomId);
-  
+    const roomRef = doc(db, "gameRooms", roomId);
+
     set((state) => ({
       ...state,
       roomId,
     }));
-  
+
     const unsubscribe = onSnapshot(roomRef, (snapshot) => {
       const roomData = snapshot.data();
-  
+
       set((state) => {
         if (state.roomId !== roomId) return state;
-  
+
         return {
           gameState: {
             ...state.gameState,
@@ -591,7 +637,8 @@ checkDiceRollsAndSetTurn: async () => {
             player2: {
               ...state.gameState.player2,
               ...roomData?.gameState?.player2,
-              id: roomData?.gameState?.player2?.id || state.gameState.player2.id,
+              id:
+                roomData?.gameState?.player2?.id || state.gameState.player2.id,
               character: roomData?.gameState?.player2?.character,
             },
             currentTurn: roomData?.gameState?.currentTurn,
@@ -605,10 +652,9 @@ checkDiceRollsAndSetTurn: async () => {
         };
       });
     });
-  
+
     return unsubscribe;
-  }
-  , 
-}))
+  },
+}));
 
 export default useOnlineGameStore;
