@@ -212,10 +212,8 @@ const useAIGameStore = create<AIGameStore>((set, get) => ({
         }
       }));
     } else if (hasDefenses && defendingPlayer === 'ai') {
-      // AI chooses defense automatically
       get().aiChooseDefense(damage, ability);
     } else {
-      // No defenses available, apply damage directly and set turn to AI
       console.log('No defenses available, calling skipDefense for:', defendingPlayer);
       get().skipDefense(defendingPlayer, damage, ability);
     }
@@ -227,15 +225,12 @@ const useAIGameStore = create<AIGameStore>((set, get) => ({
     const aiHealth = gameState.ai.currentHealth;
     const playerHealth = gameState.player.currentHealth;
     
-    // Smart AI defense strategy with multiple factors
     let chosenDefense: string | null = null;
     let defenseScore = 0;
     
-    // Calculate health percentage
     const aiHealthPercent = (aiHealth / (gameState.ai.character?.baseHealth || 200)) * 100;
     const playerHealthPercent = (playerHealth / (gameState.player.character?.baseHealth || 200)) * 100;
     
-    // Evaluate each defense option
     if (defenseInventory.reflect && defenseInventory.reflect > 0) {
       let reflectScore = 0;
       
@@ -446,11 +441,11 @@ const useAIGameStore = create<AIGameStore>((set, get) => ({
 
       // If it's now AI's turn, make its move
       if (nextTurn === 'ai') {
-        console.log('AI turn detected in useDefense, triggering AI move...');
-        console.log('Defense type was:', defenseType, 'AI should keep turn and attack again');
+        // console.log('AI turn detected in useDefense, triggering AI move...');
+        // console.log('Defense type was:', defenseType, 'AI should keep turn and attack again');
         setTimeout(() => get().aiMakeMove(), 1000);
       } else {
-        console.log('AI turn NOT detected in useDefense, nextTurn is:', nextTurn, 'defense type was:', defenseType);
+        // console.log('AI turn NOT detected in useDefense, nextTurn is:', nextTurn, 'defense type was:', defenseType);
       }
     }
 
@@ -495,13 +490,13 @@ const useAIGameStore = create<AIGameStore>((set, get) => ({
       nextTurn = defendingPlayer;
     }
     
-    console.log('skipDefense turn logic:', { 
-      defendingPlayer, 
-      attackingPlayer, 
-      hadDefenses, 
-      nextTurn,
-      newHealth 
-    });
+    // console.log('skipDefense turn logic:', { 
+    //   defendingPlayer, 
+    //   attackingPlayer, 
+    //   hadDefenses, 
+    //   nextTurn,
+    //   newHealth 
+    // });
     
     // Check for game end
     if (newHealth <= 0) {
@@ -538,13 +533,13 @@ const useAIGameStore = create<AIGameStore>((set, get) => ({
 
       // If it's now AI's turn, make its move
       if (nextTurn === 'ai') {
-        console.log('AI turn detected in skipDefense, triggering AI move...');
+        // console.log('AI turn detected in skipDefense, triggering AI move...');
         setTimeout(() => {
           console.log('About to call aiMakeMove from skipDefense...');
           get().aiMakeMove();
         }, 1000);
       } else {
-        console.log('AI turn NOT detected in skipDefense, nextTurn is:', nextTurn);
+        // console.log('AI turn NOT detected in skipDefense, nextTurn is:', nextTurn);
       }
     }
   },
@@ -568,11 +563,11 @@ const useAIGameStore = create<AIGameStore>((set, get) => ({
     const { gameState } = get();
     console.log('aiMakeMove called:', { currentTurn: gameState.currentTurn, gameStatus: gameState.gameStatus });
     if (gameState.currentTurn !== 'ai' || gameState.gameStatus !== 'inProgress') {
-      console.log('AI move blocked - not AI turn or game not in progress');
+      // console.log('AI move blocked - not AI turn or game not in progress');
       return;
     }
 
-    console.log('AI making move...', { currentTurn: gameState.currentTurn, gameStatus: gameState.gameStatus });
+    // console.log('AI making move...', { currentTurn: gameState.currentTurn, gameStatus: gameState.gameStatus });
 
     // Roll dice for AI (following game mechanics)
     get().rollAndRecordDice('ai').then((diceRoll) => {
@@ -639,7 +634,7 @@ const useAIGameStore = create<AIGameStore>((set, get) => ({
         
         console.log(`Player earned ${xpReward} XP for defeating AI`);
       } catch (error) {
-        console.error('Failed to record XP on-chain:', error);
+        // console.error('Failed to record XP on-chain:', error);
         // Still show success message even if on-chain recording fails
       }
     }

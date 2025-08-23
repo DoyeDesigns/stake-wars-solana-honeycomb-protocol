@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useState } from 'react'
+import React, { useState } from 'react'
 import { Dialog, DialogContent, DialogTrigger, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useWallet } from '@solana/wallet-adapter-react';
@@ -20,7 +20,7 @@ export default function Marketplace() {
     const wallet = useWallet();
     const { addBuffToPlayer, gameState, roomId } = useOnlineGameStore();
     const pathname = usePathname();
-    const { refreshUser } = useUserStore();
+    const {refreshUser} = useUserStore();
 
     const currentPlayer = (() => {
       if (gameState?.gameStatus !== 'inProgress') return null;
@@ -32,14 +32,6 @@ export default function Marketplace() {
       if (isPlayer2) return 'player2';
       return null;
     })();
-
-
-    useEffect(() => {
-      if (wallet.publicKey) {
-        fetchResourcesBalance();
-        refreshUser()
-      }
-    }, [wallet.publicKey]);
 
     const fetchResourcesBalance = async () => {
       if (!wallet.publicKey) {
@@ -80,20 +72,17 @@ export default function Marketplace() {
           }
 
           const burnData = await burnResponse.json();
-          console.log(burnData)
           
           if (burnData.transactionResult && burnData.transactionResult.status === "Success") {
             addBuffToPlayer(currentPlayer as 'player1' | 'player2', powerUp.name, powerUp.effect, powerUp.remainingTurns)
-            fetchResourcesBalance()
-            refreshUser();
+            refreshUser()
             toast.success(`Successfully bought ${powerUp.name}. Power up now equipped!`)
             setIsOpen(false);
           } else {
             toast.error("Transaction failed");
           }
         } catch (error) {
-          console.error("Purchase power up error:", error);
-          toast.error("Failed to purchase power up");
+          toast.error(`Failed to purchase power up ${error}`);
         }
     }
 
@@ -102,7 +91,15 @@ export default function Marketplace() {
 
   return (
     <div className="fixed bottom-[137px] left-5">
-      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <Dialog
+        open={isOpen}
+        onOpenChange={(open) => {
+          setIsOpen(open);
+          if (open && wallet.publicKey) {
+            fetchResourcesBalance();
+          }
+        }}
+      >
         <DialogTrigger className="connect-button-bg size-[84px] px-5 rounded-full items-center justify-center cursor-pointer border-2 border-[#FFFFFF]">
           <img src="/market.svg" alt="market" width={37} height={37} />
         </DialogTrigger>
@@ -122,22 +119,52 @@ export default function Marketplace() {
                 </TabsTrigger>
               </div>
               <div>
-                <span>Balance: {chakraBalance ? chakraBalance : 0} CHK(chakra)</span>
+                <span>
+                  Balance: {chakraBalance ? chakraBalance : 0} CHK(chakra)
+                </span>
               </div>
             </TabsList>
-            <TabsContent className='flex pt-10 gap-4 flex-wrap !h-[150px] overflow-hidden justify-center' value="power-ups">
+            <TabsContent
+              className="flex pt-10 gap-4 flex-wrap !h-[150px] overflow-hidden justify-center"
+              value="power-ups"
+            >
               {buffs.map((powerup, index) => (
-                <div key={index} className='rounded-[10px] flex flex-col items-center justify-between p-5 bg-[#00000040] max-w-52'>
+                <div
+                  key={index}
+                  className="rounded-[10px] flex flex-col items-center justify-between p-5 bg-[#00000040] max-w-52"
+                >
                   <div>
-                    <div className='bg-[#040404] rounded-[10px] flex justify-center'>
-                    <img src="/power-up-default.svg" alt="power-up-default" width={100} height={100} />
+                    <div className="bg-[#040404] rounded-[10px] flex justify-center">
+                      <img
+                        src="/power-up-default.svg"
+                        alt="power-up-default"
+                        width={100}
+                        height={100}
+                      />
+                    </div>
+
+                    <h2 className="font-bold text-sm text-white mb-5 mt-4">
+                      {powerup.name}
+                    </h2>
+                    <p className="text-sm text-white mb-5">
+                      Increases attack power by {powerup.effect} for your next{" "}
+                      {powerup.remainingTurns} attack plays during a match
+                    </p>
                   </div>
 
-                  <h2 className='font-bold text-sm text-white mb-5 mt-4'>{powerup.name}</h2>
-                  <p className='text-sm text-white mb-5'>Increases attack power by {powerup.effect} for your next {powerup.remainingTurns} attack plays during a match</p>
-                  </div>
-
-                  <Button disabled={(chakraBalance as number ?? 0) < powerup.price} onClick={() => purchasePowerUp(powerup)} className='flex cursor-pointer w-full bg-[#2F2B24] items-center border-[0.6px] rounded-lg border-[#FFFFFF] gap-2'><img src="/chakra_coin.svg" alt="chakra" width={20} height={20} />{powerup.price} CHK</Button>
+                  <Button
+                    disabled={((chakraBalance as number) ?? 0) < powerup.price}
+                    onClick={() => purchasePowerUp(powerup)}
+                    className="flex cursor-pointer w-full bg-[#2F2B24] items-center border-[0.6px] rounded-lg border-[#FFFFFF] gap-2"
+                  >
+                    <img
+                      src="/chakra_coin.svg"
+                      alt="chakra"
+                      width={20}
+                      height={20}
+                    />
+                    {powerup.price} CHK
+                  </Button>
                 </div>
               ))}
             </TabsContent>

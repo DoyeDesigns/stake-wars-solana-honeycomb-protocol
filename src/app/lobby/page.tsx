@@ -65,8 +65,10 @@ export default function Lobby() {
   };
 
   useEffect(() => {
-    fetchCharacters();
-  }, [wallet.connected]);
+    if (wallet.publicKey) {
+      fetchCharacters();
+    }
+  }, [wallet.publicKey]);
 
   return (
     <div>

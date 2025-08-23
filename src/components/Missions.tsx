@@ -90,7 +90,7 @@ const fetchUserMissions = async () => {
       setCompleted([]);
     }
   } catch (error) {
-    console.error("Error fetching missions:", error);
+    toast.error(`Error fetching missions, ${error}`);
     setOngoing([]);
     setCompleted([]);
   }

@@ -42,7 +42,7 @@ const AIWonMessage: React.FC = () => {
         },
         body: JSON.stringify({
           profileAddress: matchingProfile.address,
-          xpAmount: 50,
+          xpAmount: 10,
         }),
       });
 
@@ -55,7 +55,7 @@ const AIWonMessage: React.FC = () => {
       const claimData = await claimResponse.json();
       
       if (claimData.transactionResult && claimData.transactionResult.status === "Success") {
-        toast.success(`Successfully claimed 50 XP! ${claimData.transactionResult.signature}`);
+        toast.success(`Successfully claimed 10 XP! ${claimData.transactionResult.signature}`);
         setHasClaimed(true);
         await refreshUser();
       } else {
@@ -83,10 +83,10 @@ const AIWonMessage: React.FC = () => {
           </div>
           <h2 className="text-2xl font-bold text-white mb-2">Victory!</h2>
           <p className="text-gray-300 mb-4">
-            You defeated the AI opponent! You earned 50 XP for your victory.
+            You defeated the AI opponent! You earned 10 XP for your victory.
           </p>
           <div className="bg-green-600 text-white py-2 px-4 rounded-lg mb-6">
-            <span className="font-bold">+50 XP</span>
+            <span className="font-bold">+10 XP</span>
           </div>
         </div>
         
@@ -100,7 +100,7 @@ const AIWonMessage: React.FC = () => {
                 : "bg-[#FFCE31] hover:bg-[#FFD95E] text-black"
             }`}
           >
-            {hasClaimed ? "✅ XP Claimed" : isClaiming ? "Claiming..." : "Claim 50 XP"}
+            {hasClaimed ? "✅ XP Claimed" : isClaiming ? "Claiming..." : "Claim 10 XP"}
           </Button>
           <Button
             onClick={handleBackToLobby}
