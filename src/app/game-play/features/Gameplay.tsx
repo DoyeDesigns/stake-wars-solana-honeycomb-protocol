@@ -42,7 +42,7 @@ export default function Gameplay({roomId} : {roomId: string}) {
   const gameRoomId = roomId;
 
   useEffect(() => {
-    if (!wallet.connected) {
+    if (!wallet.publicKey) {
       // router.push('/wallet');
       toast.info('Please connect your wallet to play the game');
     }
@@ -53,7 +53,7 @@ export default function Gameplay({roomId} : {roomId: string}) {
       unsubscribe();
       reset();
     };
-  }, [gameRoomId, init, reset, wallet.connected]);
+  }, [gameRoomId, init, reset, wallet.publicKey]);
 
 
   useEffect(() => {
@@ -169,10 +169,11 @@ export default function Gameplay({roomId} : {roomId: string}) {
 
   const copyRoomId = async () => {
     try {
-      await navigator.clipboard.writeText(roomId);
-      toast.success('Room ID copied to clipboard!');
+      const link = `${window.location.origin}/lobby?gid=${roomId}`;
+      await navigator.clipboard.writeText(link);
+      toast.success('Game room ID copied to clipboard!');
     } catch (err) {
-      toast.error(`Failed to copy room ID: ${err}`);
+      toast.error(`Failed to copy Game room ID: ${err}`);
     }
   };
 

@@ -41,15 +41,13 @@ export default function ConnectButton({ width }: ConnectButtonProps) {
           includeProof: true,
         });
 
-        console.log("Found users:", user);
-
         if (user && user.length > 0) {
           setUser(user[0] as unknown as User);
         } else {
           setUser(null);
         }
       } catch (error) {
-        console.error("Error fetching user:", error);
+        toast.error(`Error fetching user: ${error}`);
         setUser(null);
       }
     };
@@ -68,14 +66,11 @@ useEffect(() => {
     }
 
     try {
-      console.log("Fetching profiles for user.id:", user.id);
       const { profile } = await client.findProfiles({
         userIds: [user.id],
         projects: [PROJECT_ADDRESS],
         includeProof: true,
       });
-
-      console.log("Found profiles:", profile);
 
       if (profile && profile.length > 0) {
         updateUser({ profiles: profile });
@@ -84,7 +79,6 @@ useEffect(() => {
         setHasProfile(false);
       }
     } catch (err) {
-      console.error("Error checking for profile:", err);
       toast.error(`Error checking for profile: ${err}`);
     }
   };
