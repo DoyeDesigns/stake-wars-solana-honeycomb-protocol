@@ -84,7 +84,6 @@ export default function CharacterCarousel({
         activeCharacter,
         wallet.publicKey?.toString() as string
       );
-      await joinGameRoom(roomId, wallet.publicKey?.toString() as string);
 
       router.push(`/game-play/${roomId}`);
 

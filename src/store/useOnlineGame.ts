@@ -479,17 +479,10 @@ const useOnlineGameStore = create<OnlineGameStore>((set, get) => ({
       throw new Error("Room does not exist");
     }
 
-    const roomData = roomSnap.data();
+    const roomData = roomSnap.data() as GameRoomDocument;
 
-    if (roomData.gameState.player1 && roomData.gameState.player2) {
-      throw new Error("Room already has 2 players");
-    }
-
-    if (
-      roomData.player1?.gameState?.wallet === playerAddress ||
-      roomData.player2?.gameState?.wallet === playerAddress
-    ) {
-      throw new Error("You are already in this room");
+    if (roomData?.gameState?.player1 && roomData?.gameState?.player1.id === playerAddress) {
+      throw new Error("You're already in this game");
     }
 
     await updateDoc(roomRef, {
