@@ -3,6 +3,8 @@
 import ConnectButton from '@/components/ConnectButton'
 import GetstartedButton from '@/components/GetstartedButton'
 import React from 'react'
+import Link from 'next/link'
+import { Button } from '@/components/ui/button'
 
 export default function Home() {
   return (
@@ -16,6 +18,11 @@ export default function Home() {
       <div className='flex flex-col gap-4.5 justify-center items-center mt-10 pb-20'>
         <ConnectButton width="w-[200px]" />
         <GetstartedButton />
+        <Link href="/tournaments">
+          <Button className="w-[200px] bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold py-3 rounded-lg shadow-lg">
+            🏆 Tournaments
+          </Button>
+        </Link>
       </div>
     </div>
   )

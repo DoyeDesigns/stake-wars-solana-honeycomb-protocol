@@ -15,7 +15,12 @@ export default function UserProfile() {
   const wallet = useWallet();
   const [balance, setBalance] = useState<number | null>(null);
   const [isOpen, setIsOpen] = useState(false);
-  const { user } = useUserStore()
+  const { user } = useUserStore();
+
+  // Get wins and losses from profile customData
+  const profile = user?.profiles?.[0];
+  const wins = parseInt(profile?.customData?.wins?.[0] || "0");
+  const losses = parseInt(profile?.customData?.losses?.[0] || "0");
 
   useEffect(() => {
     const fetchBalance = async () => {
@@ -64,11 +69,14 @@ export default function UserProfile() {
                     <img src="/copy.png" alt="copy" width={20} height={20} />
                   </button>
                 </span>
-                <p>
+                <p className="mb-2">
                   <span className="text-[#A78ACE] font-bold">
                     Account balance:
                   </span>{" "}
                   {balance} SOL
+                </p>
+                <p>
+                  <span className="text-[#A78ACE] font-bold">Wins:</span> {wins} | <span className="text-[#A78ACE] font-bold">Losses:</span> {losses}
                 </p>
               </div>
             </div>

@@ -213,8 +213,8 @@ export default function Gameplay({roomId} : {roomId: string}) {
         <PlayerHealth  gameState={gameState} />
       </div>
       <div className={`absolute top-0 w-full ${showDefenseModal || showWinner || showLoser ? 'h-full' : ''}`}>
-        {showWinner && <WonMessage />}
-        {showLoser && <LostMessage/>}
+        {showWinner && <WonMessage roomId={roomId} />}
+        {showLoser && <LostMessage roomId={roomId} />}
         {showDefenseModal && defendingPlayer === gameState.currentTurn && (
         <DefenseModal
           player={defendingPlayer as 'player1' | 'player2'}

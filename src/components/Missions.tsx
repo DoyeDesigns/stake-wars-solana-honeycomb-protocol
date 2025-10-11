@@ -46,6 +46,27 @@ const hardcodedMissions = [
   { id: "mission2", name: "Gather Intelligence", difficulty: "Medium", reward: 50, duration: 86400, claimed: false, missionPubkey: "Dn8DjQgh1dJFem4tYEUjTeaxagRumMt7nj36JKcpVHm7"}
 ];
 
+const ranks = [
+  "Academy Student",
+  "Genin",
+  "Chūnin",
+  "Special Jōnin",
+  "Jōnin",
+  "Anbu Black Ops",
+  "Kage Candidate",
+  "Kage",
+  "Sannin",
+  "Legendary Ninja",
+  "Sage",
+  "Jinchūriki Vessel",
+  "Tailed Beast Master",
+  "Six Paths Disciple",
+  "Ōtsutsuki Initiate",
+  "Ōtsutsuki Warrior",
+  "Ōtsutsuki Sage",
+  "Ōtsutsuki God",
+];
+
 const PROJECT_ADDRESS = process.env.PROJECT_ADDRESS as string;
 const LUT_ADDRESS = process.env.LUT_ADDRESS as string;
 
@@ -61,6 +82,14 @@ export default function Missions({ character }: SelectedCharacter) {
   remainingTimes,
   setRemainingTime
 } = useMissionsStore();
+
+  // Calculate current level based on XP
+  const xp = Number(user?.profiles?.[0]?.platformData?.xp ?? 0);
+  const xpPerLevel = 500;
+  const thresholds = ranks.map((_, i) => xpPerLevel * (i + 1));
+  const currentLevelIndex = thresholds.findIndex((reqXp) => xp < reqXp);
+  const currentLevel = currentLevelIndex === -1 ? ranks.length : currentLevelIndex + 1;
+  const currentRankName = ranks[currentLevelIndex === -1 ? ranks.length - 1 : currentLevelIndex] || "Academy Student";
 
 const fetchUserMissions = async () => {
   if (!wallet.publicKey) return;
@@ -225,11 +254,18 @@ useEffect(() => {
               </div>
             )}
 
-            <div className="flex items-center gap-2.5">
-              <img src="/xp.png" alt="xp coin" />
-              <span className="text-[#FFD95E]">
-                {user?.profiles?.[0]?.platformData?.xp ?? 0} XP
-              </span>
+            <div className="flex flex-col items-end gap-2">
+              <div className="flex items-center gap-2.5">
+                <img src="/xp.png" alt="xp coin" />
+                <span className="text-[#FFD95E]">
+                  {user?.profiles?.[0]?.platformData?.xp ?? 0} XP
+                </span>
+              </div>
+              <div className="flex items-center gap-2.5">
+                <span className="text-purple-400 font-semibold text-sm">
+                  Level {currentLevel} ({currentRankName})
+                </span>
+              </div>
             </div>
           </div>
         </SheetHeader>

@@ -10,6 +10,7 @@ import { toast } from "react-toastify";
 import { Button } from "./ui/button";
 import base58 from "bs58";
 import { useUserStore } from "@/store/useUser";
+import { useAuthStore } from "@/store/useAuth";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 
 type ConnectButtonProps = {
@@ -26,8 +27,9 @@ export const compactHash = (hash: string | null | undefined) => {
 export default function ConnectButton({ width }: ConnectButtonProps) {
   const wallet = useWallet();
   const { user, setUser, updateUser } = useUserStore();
+  const { setAccessToken: setGlobalAccessToken } = useAuthStore();
 
-  const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [localAccessToken, setLocalAccessToken] = useState<string | null>(null);
   const [hasProfile, setHasProfile] = useState<boolean>(false);
   const [loading, setLoading] = useState(false);
 
@@ -114,7 +116,8 @@ const authenticateWithEdgeClient = async () => {
   });
 
   if (authConfirm.accessToken) {
-    setAccessToken(authConfirm.accessToken);
+    setLocalAccessToken(authConfirm.accessToken);
+    setGlobalAccessToken(authConfirm.accessToken); // Save to global store
     toast.success("Authentication successful");
   }
 };
@@ -163,7 +166,7 @@ const authenticateWithEdgeClient = async () => {
   };
 
   const createProfile = async () => {
-    if (!wallet.publicKey || !accessToken || !user) return;
+    if (!wallet.publicKey || !localAccessToken || !user) return;
 
     try {
       setLoading(true);
@@ -183,7 +186,7 @@ const authenticateWithEdgeClient = async () => {
         {
           fetchOptions: {
             headers: {
-              authorization: `Bearer ${accessToken}`,
+              authorization: `Bearer ${localAccessToken}`,
             },
           },
         }
@@ -223,7 +226,7 @@ const authenticateWithEdgeClient = async () => {
   >
     {loading ? "Creating..." : "Create User"}
   </Button>
-) : wallet.connected && user && !hasProfile && !accessToken ? (
+) : wallet.connected && user && !hasProfile && !localAccessToken ? (
   // 3. Authenticate (only if no profile and no token)
   <Button
     onClick={authenticateWithEdgeClient}
@@ -231,7 +234,7 @@ const authenticateWithEdgeClient = async () => {
   >
     Authenticate
   </Button>
-) : wallet.connected && user && !hasProfile && accessToken ? (
+) : wallet.connected && user && !hasProfile && localAccessToken ? (
   // 4. Create Profile after auth
   <Button
     onClick={createProfile}

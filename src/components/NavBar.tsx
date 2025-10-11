@@ -30,6 +30,11 @@ export default function NavBar() {
           <div className='sm:hidden'>
             <SearchDialog />
           </div>
+          <Link href="/tournaments" className="hidden sm:block">
+            <button className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-lg transition-colors">
+              🏆 Tournaments
+            </button>
+          </Link>
           <div className={`${wallet.connected ? 'block' : 'hidden'}`}>
             <UserProfile />
           </div>

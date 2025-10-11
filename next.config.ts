@@ -17,6 +17,7 @@ const nextConfig: NextConfig = {
     CHAKRA_RESOURCE_ADDRESS: process.env.CHAKRA_RESOURCE_ADDRESS,
     CHAKRA_RESOURCE_TREE_ADDRESS: process.env.CHAKRA_RESOURCE_TREE_ADDRESS,
     LUT_ADDRESS: process.env.LUT_ADDRESS,
+    SOLANA_RPC_URL: process.env.SOLANA_RPC_URL,
   },
   webpack: config => {
     config.externals.push('pino-pretty', 'lokijs', 'encoding')

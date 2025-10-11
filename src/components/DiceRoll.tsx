@@ -4,6 +4,7 @@ import useOnlineGameStore from "@/store/useOnlineGame";
 import { toast } from "react-toastify";
 import { Button } from "./ui/button";
 import { useWallet } from "@solana/wallet-adapter-react";
+import { useStealthGame } from "@/hooks/useStealthGame";
 
 const DiceRoll: React.FC = () => {
   const {
@@ -11,11 +12,13 @@ const DiceRoll: React.FC = () => {
     gameState,
     performAttack,
     addDefenseToInventory,
+    roomId,
   } = useOnlineGameStore();
   const [rollNumber, setRollNumber] = useState(0);
   const [isButtonDisabled, setIsButtonDisabled] = useState(false);
 
   const wallet = useWallet();
+  const { stealthDiceRoll, isInitialized } = useStealthGame();
 
   const isPlayerTurn = (() => {
     if (gameState?.gameStatus !== "inProgress") return false;
@@ -34,7 +37,18 @@ const DiceRoll: React.FC = () => {
     setIsButtonDisabled(true);
 
     try {
-      const rolledDiceNumber = await rollAndRecordDice();
+      // Generate random dice roll
+      const rolledDiceNumber = Math.floor(Math.random() * 6) + 1;
+      
+      // Use stealth signing if initialized, otherwise fallback to regular method
+      if (isInitialized && roomId) {
+        // Seamless stealth dice roll (no popup)
+        await stealthDiceRoll(parseInt(roomId), rolledDiceNumber);
+      } else {
+        // Fallback to regular method
+        await rollAndRecordDice();
+      }
+
       const currentPlayer = gameState.currentTurn;
       const player = gameState[currentPlayer];
 
