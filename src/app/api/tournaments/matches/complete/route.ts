@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
         m.player2
       );
 
-      if (nextMatch) {
+      if (nextMatch && nextMatch.player1 && nextMatch.player2) {
         // Both players are now assigned to this match, create game room
         const gameRoomId = `room_${Date.now()}_${Math.random().toString(36).substring(7)}`;
         
