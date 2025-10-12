@@ -75,14 +75,41 @@ export default function Lobby() {
       <Suspense fallback={<div className="p-4"><MoonLoader size={30} /></div>}>
         {characterAbilities.length > 0 ? (
           <div className="space-y-10">
-            <div className="flex justify-center gap-4">
-              <Button 
-                onClick={() => router.push('/ai-game')}
-                className="bg-[#B91770] hover:bg-[#B91770]/80 text-white font-bold py-3 px-6 rounded-lg"
-              >
-                🎮 VS AI Mode
-              </Button>
+            {/* Quick Access Navigation */}
+            <div className="flex flex-col items-center gap-4">
+              {/* Primary Actions */}
+              <div className="flex justify-center gap-4 flex-wrap">
+                <Button 
+                  onClick={() => router.push('/ai-game')}
+                  className="bg-[#B91770] hover:bg-[#B91770]/80 text-white font-bold py-3 px-6 rounded-lg"
+                >
+                  🎮 VS AI Mode
+                </Button>
+                <Button 
+                  onClick={() => router.push('/wager')}
+                  className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-bold py-3 px-6 rounded-lg"
+                >
+                  💰 Wager Matches
+                </Button>
+                <Button 
+                  onClick={() => router.push('/tournaments')}
+                  className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold py-3 px-6 rounded-lg"
+                >
+                  🏆 Tournaments
+                </Button>
+              </div>
+              
+              {/* Secondary Actions */}
+              <div className="flex justify-center gap-3 flex-wrap">
+                <Button 
+                  onClick={() => router.push('/leaderboard')}
+                  className="bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-700 hover:to-orange-700 text-white font-semibold py-2 px-5 rounded-lg text-sm"
+                >
+                  📊 Leaderboard
+                </Button>
+              </div>
             </div>
+            
             <CharacterCarousel characters={characterAbilities} />
           </div>
         ) : (

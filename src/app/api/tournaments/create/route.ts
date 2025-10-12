@@ -3,16 +3,19 @@ import { collection, addDoc } from "firebase/firestore";
 import { db } from "@/config/firebase";
 import { CreateTournamentRequest, PrizeSplit } from "@/types/tournament";
 
-const DEFAULT_PRIZE_SPLIT: PrizeSplit = {
-  first: 60,
-  second: 30,
-  third: 10,
+// Default prize splits based on number of winners
+const DEFAULT_PRIZE_SPLITS: Record<number, PrizeSplit> = {
+  1: { first: 100 }, // Winner takes all
+  2: { first: 70, second: 30 },
+  3: { first: 60, second: 30, third: 10 },
+  4: { first: 50, second: 30, third: 15, fourth: 5 },
+  5: { first: 50, second: 25, third: 15, fourth: 7, fifth: 3 },
 };
 
 export async function POST(request: NextRequest) {
   try {
     const body: CreateTournamentRequest = await request.json();
-    const { name, entryFee, maxParticipants, prizeSplit, description, hostAddress, hostName } = body;
+    const { name, entryFee, maxParticipants, numberOfWinners, prizeSplit, description, hostAddress, hostName } = body;
 
     // Validation
     if (!name || name.trim().length === 0) {
@@ -36,16 +39,36 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (![8, 16, 32].includes(maxParticipants)) {
+    if (![2, 4, 8, 16, 32].includes(maxParticipants)) {
       return NextResponse.json(
-        { error: "Maximum participants must be 8, 16, or 32" },
+        { error: "Maximum participants must be 2, 4, 8, 16, or 32" },
+        { status: 400 }
+      );
+    }
+
+    // Determine max winners based on tournament size
+    const maxWinnersAllowed = maxParticipants === 2 ? 2 : Math.min(5, maxParticipants);
+    const finalNumberOfWinners = numberOfWinners && numberOfWinners <= maxWinnersAllowed 
+      ? numberOfWinners 
+      : (maxParticipants === 2 ? 2 : 3); // Default: 2 for 2-player, 3 for others
+
+    // Validate number of winners
+    if (finalNumberOfWinners < 1 || finalNumberOfWinners > maxWinnersAllowed) {
+      return NextResponse.json(
+        { error: `Number of winners must be between 1 and ${maxWinnersAllowed}` },
         { status: 400 }
       );
     }
 
     // Validate prize split
-    const finalPrizeSplit = prizeSplit || DEFAULT_PRIZE_SPLIT;
-    const totalPercentage = finalPrizeSplit.first + finalPrizeSplit.second + finalPrizeSplit.third;
+    const finalPrizeSplit = prizeSplit || DEFAULT_PRIZE_SPLITS[finalNumberOfWinners];
+    const totalPercentage = 
+      (finalPrizeSplit.first || 0) + 
+      (finalPrizeSplit.second || 0) + 
+      (finalPrizeSplit.third || 0) +
+      (finalPrizeSplit.fourth || 0) +
+      (finalPrizeSplit.fifth || 0);
+    
     if (totalPercentage !== 100) {
       return NextResponse.json(
         { error: "Prize split percentages must add up to 100" },
@@ -60,6 +83,7 @@ export async function POST(request: NextRequest) {
       hostName: hostName || 'Anonymous',
       entryFee,
       maxParticipants,
+      numberOfWinners: finalNumberOfWinners,
       currentParticipants: 0,
       prizePool: 0,
       prizeSplit: finalPrizeSplit,

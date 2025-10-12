@@ -12,6 +12,7 @@ import {
 import { compactHash } from "./ConnectButton";
 import { MoonLoader } from "react-spinners";
 import { useWallet } from "@solana/wallet-adapter-react";
+import { toast } from "react-toastify";
 
 interface GameRoomSearchProps {
   setIsOpen: Dispatch<SetStateAction<boolean>>;
@@ -21,9 +22,10 @@ const UserGameRooms = ({setIsOpen} : GameRoomSearchProps) => {
   const [gameRooms, setGameRooms] = useState<GameRoomDocument[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [claimingRewards, setClaimingRewards] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<
-    "waiting" | "inProgress" | "character-select" | null
-  >('inProgress');
+    "waiting" | "inProgress" | "character-select" | "finished" | "claimed" | "unclaimed" | null
+  >(null); // Default to null to show all with priority
 
   const { findUserRooms, validatePlayerInRoom } = useOnlineGameStore();
   const router = useRouter();
@@ -35,13 +37,8 @@ const UserGameRooms = ({setIsOpen} : GameRoomSearchProps) => {
 
     try {
       const rooms = await findUserRooms(wallet.publicKey?.toString() as string);
-      const filteredRooms = rooms?.filter(
-        (room) =>
-          room.status === "inProgress" ||
-          room.status === "character-select" ||
-          room.status === "waiting"
-      );
-      setGameRooms(filteredRooms || []);
+      // Don't filter - show all rooms including finished
+      setGameRooms(rooms || []);
     } catch (err) {
       setError(`Failed to load game rooms. ${err}`);
     } finally {
@@ -64,12 +61,79 @@ const UserGameRooms = ({setIsOpen} : GameRoomSearchProps) => {
     }
   };
 
+  const handleClaimRewards = async (gameRoom: GameRoomDocument) => {
+    setClaimingRewards(gameRoom.id);
+    try {
+      // Navigate to game room where they can claim rewards
+      router.push(`/game-play/${gameRoom.id}`);
+      setIsOpen(false);
+    } catch (err) {
+      toast.error(`Failed to claim rewards: ${err}`);
+    } finally {
+      setClaimingRewards(null);
+    }
+  };
+
+  const getWinnerStatus = (gameRoom: GameRoomDocument): string => {
+    if (!gameRoom.gameState?.winner || gameRoom.status !== 'finished') return '';
+    
+    const winnerId = gameRoom.gameState.winner === 'player1' 
+      ? gameRoom.gameState.player1.id 
+      : gameRoom.gameState.player2.id;
+    
+    if (winnerId === wallet.publicKey?.toString()) {
+      return 'You Won! 🎉';
+    } else {
+      return 'You Lost';
+    }
+  };
+
   const sortedGameRooms = () => {
-    if (!sortBy) return gameRooms;
-    return [
-      ...gameRooms.filter((room) => room?.gameState?.gameStatus === sortBy),
-      ...gameRooms.filter((room) => room?.gameState?.gameStatus !== sortBy),
-    ];
+    let filtered = [...gameRooms];
+    
+    // Filter by specific sort option
+    if (sortBy === 'claimed') {
+      filtered = gameRooms.filter((room) => room.status === 'finished' && room.rewardsClaimed === true);
+    } else if (sortBy === 'unclaimed') {
+      filtered = gameRooms.filter((room) => room.status === 'finished' && room.rewardsClaimed !== true);
+    } else if (sortBy === 'waiting') {
+      filtered = gameRooms.filter((room) => room.status === 'waiting');
+    } else if (sortBy === 'inProgress') {
+      filtered = gameRooms.filter((room) => room.status === 'inProgress' || room.gameState?.gameStatus === 'inProgress');
+    } else if (sortBy === 'character-select') {
+      filtered = gameRooms.filter((room) => room.status === 'character-select');
+    } else if (sortBy === 'finished') {
+      filtered = gameRooms.filter((room) => room.status === 'finished');
+    }
+    // else null = show all with priority sorting
+    
+    // Sort by priority and then by most recent
+    return filtered.sort((a, b) => {
+      // If showing all games (no specific filter), apply priority order
+      if (!sortBy) {
+        const getPriority = (room: GameRoomDocument): number => {
+          if (room.status === 'inProgress') return 1;
+          if (room.status === 'character-select') return 2;
+          if (room.status === 'waiting') return 3;
+          if (room.status === 'finished' && !room.rewardsClaimed) return 4; // Unclaimed
+          if (room.status === 'finished' && room.rewardsClaimed) return 5; // Claimed
+          return 6;
+        };
+        
+        const priorityA = getPriority(a);
+        const priorityB = getPriority(b);
+        
+        // If different priorities, sort by priority
+        if (priorityA !== priorityB) {
+          return priorityA - priorityB;
+        }
+      }
+      
+      // Within same priority (or when filtered), sort by most recent first
+      const aTime = typeof a.createdAt === 'number' ? a.createdAt : a.createdAt?.toMillis?.() || 0;
+      const bTime = typeof b.createdAt === 'number' ? b.createdAt : b.createdAt?.toMillis?.() || 0;
+      return bTime - aTime;
+    });
   };
 
   // const getUsernameById = (
@@ -97,17 +161,26 @@ const UserGameRooms = ({setIsOpen} : GameRoomSearchProps) => {
               Sort By
             </DropdownMenuTrigger>
             <DropdownMenuContent className="!bg-[#0A0A0A]">
-              <DropdownMenuItem onClick={() => setSortBy("waiting")}>
-                Waiting
+              <DropdownMenuItem onClick={() => setSortBy(null)} defaultChecked>
+                All Games (Priority)
               </DropdownMenuItem>
-              <DropdownMenuItem defaultChecked onClick={() => setSortBy("inProgress")}>
+              <DropdownMenuItem onClick={() => setSortBy("inProgress")}>
                 In Progress
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setSortBy("character-select")}>
-                Character select
+                Character Select
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setSortBy(null)}>
-                Clear Sort
+              <DropdownMenuItem onClick={() => setSortBy("waiting")}>
+                Waiting
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSortBy("unclaimed")}>
+                🎁 Unclaimed Rewards
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSortBy("claimed")}>
+                ✅ Claimed Rewards
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSortBy("finished")}>
+                All Finished
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -163,19 +236,51 @@ const UserGameRooms = ({setIsOpen} : GameRoomSearchProps) => {
               <div className="flex justify-between gap-1 lg:justify-start">
                 <strong>Status:</strong>{" "}
                 <span
-                  className={`text-[#BFE528] text-right lg:text-left capitalize`}
+                  className={`text-right lg:text-left capitalize ${
+                    gameRoom.status === 'finished' 
+                      ? (gameRoom.rewardsClaimed ? 'text-green-400' : 'text-yellow-400')
+                      : 'text-[#BFE528]'
+                  }`}
                 >
                   {gameRoom.status}
+                  {gameRoom.status === 'finished' && (
+                    gameRoom.rewardsClaimed ? ' ✅' : ' 🎁'
+                  )}
                 </span>
               </div>
+              {gameRoom.status === 'finished' && (
+                <div className="flex justify-between gap-1 lg:justify-start">
+                  <strong>Result:</strong>{" "}
+                  <span className="text-right lg:text-left font-bold text-white">
+                    {getWinnerStatus(gameRoom)}
+                  </span>
+                </div>
+              )}
             </div>
-            <div className="flex justify-center lg:justify-end mt-4">
-              <Button
-                onClick={() => handleJoinRoom(gameRoom)}
-                className="bg-[#34681C] text-[12px] lg:text-base cursor-pointer disabled:bg-[#34681C]/80 rounded-[10px] h-11 text-white font-bold border-none"
-              >
-                Join Room
-              </Button>
+            <div className="flex justify-center lg:justify-end mt-4 gap-2">
+              {gameRoom.status === 'finished' && !gameRoom.rewardsClaimed ? (
+                <Button
+                  onClick={() => handleClaimRewards(gameRoom)}
+                  disabled={claimingRewards === gameRoom.id}
+                  className="bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-700 hover:to-orange-700 text-[12px] lg:text-base cursor-pointer rounded-[10px] h-11 text-white font-bold border-none"
+                >
+                  {claimingRewards === gameRoom.id ? "Loading..." : "🎁 Claim Rewards"}
+                </Button>
+              ) : gameRoom.status === 'finished' ? (
+                <Button
+                  onClick={() => handleJoinRoom(gameRoom)}
+                  className="bg-gray-600 hover:bg-gray-700 text-[12px] lg:text-base cursor-pointer rounded-[10px] h-11 text-white font-bold border-none"
+                >
+                  View Game
+                </Button>
+              ) : (
+                <Button
+                  onClick={() => handleJoinRoom(gameRoom)}
+                  className="bg-[#34681C] text-[12px] lg:text-base cursor-pointer disabled:bg-[#34681C]/80 rounded-[10px] h-11 text-white font-bold border-none"
+                >
+                  Join Room
+                </Button>
+              )}
             </div>
           </div>
         </div>

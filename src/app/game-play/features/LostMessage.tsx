@@ -26,32 +26,101 @@ export default function LostMessage({ roomId }: LostMessageProps) {
   const [hasClaimed, setHasClaimed] = useState(false);
   const [isWagerMatch, setIsWagerMatch] = useState(false);
   const [wagerAmount, setWagerAmount] = useState(0);
+  const [isTournamentMatch, setIsTournamentMatch] = useState(false);
+  const [tournamentId, setTournamentId] = useState<string | null>(null);
+  const [tournamentPrize, setTournamentPrize] = useState<number>(0);
+  const [tournamentPosition, setTournamentPosition] = useState<string>("");
+  const [prizeClaimed, setPrizeClaimed] = useState(false);
+  const [claimingPrize, setClaimingPrize] = useState(false);
 
-  // Check if this is a wager match
+  // Check if this is a wager match or tournament match
   useEffect(() => {
-    const checkWagerMatch = async () => {
+    const checkMatchType = async () => {
       try {
         const gameRoomRef = doc(db, "gameRooms", roomId);
         const gameRoomSnap = await getDoc(gameRoomRef);
         
         if (gameRoomSnap.exists()) {
           const gameData = gameRoomSnap.data();
+          
+          // Check if rewards already claimed
+          if (gameData.rewardsClaimed) {
+            setHasClaimed(true);
+            console.log("✅ Rewards already claimed for this game");
+          }
+          
           if (gameData.isWagerMatch && gameData.wagerId) {
             setIsWagerMatch(true);
             setWagerAmount(gameData.wagerAmount || 0);
           }
+          
+          if (gameData.isTournamentMatch && gameData.tournamentId) {
+            setIsTournamentMatch(true);
+            setTournamentId(gameData.tournamentId);
+            
+            // Poll for tournament completion and prize distribution
+            const checkPrizes = async () => {
+              try {
+                const tournamentResponse = await fetch(`/api/tournaments/${gameData.tournamentId}`);
+                const tournamentData = await tournamentResponse.json();
+                
+                if (tournamentData.success && tournamentData.tournament.prizeDistribution) {
+                  const myPrize = tournamentData.tournament.prizeDistribution.find(
+                    (p: { address: string; amount: number; position: string; claimed?: boolean }) => 
+                      p.address === wallet.publicKey?.toString()
+                  );
+                  
+                  if (myPrize) {
+                    setTournamentPrize(myPrize.amount);
+                    setTournamentPosition(myPrize.position);
+                    setPrizeClaimed(myPrize.claimed || false);
+                    
+                    if (!myPrize.claimed) {
+                      toast.info(`Tournament finished! You placed ${myPrize.position} and won ${myPrize.amount} CKRA! Scroll down to claim.`, {
+                        autoClose: 7000,
+                      });
+                    }
+                  }
+                }
+              } catch (error) {
+                console.error("Error checking prizes:", error);
+              }
+            };
+            
+            // Check immediately
+            await checkPrizes();
+            
+            // Also check every 5 seconds for up to 30 seconds (in case finals is still being played)
+            let attempts = 0;
+            const interval = setInterval(async () => {
+              attempts++;
+              if (attempts > 6 || tournamentPrize > 0) {
+                clearInterval(interval);
+                return;
+              }
+              await checkPrizes();
+            }, 5000);
+          }
         }
       } catch (error) {
-        console.error("Error checking wager match:", error);
+        console.error("Error checking match type:", error);
       }
     };
 
-    checkWagerMatch();
-  }, [roomId]);
+    checkMatchType();
+  }, [roomId, wallet.publicKey]);
 
   // Function to get or refresh access token
   const getAccessToken = async (): Promise<string | null> => {
-    if (accessToken) return accessToken;
+    const { isTokenValid } = useAuthStore.getState();
+    
+    // Check if token is expired
+    if (accessToken && !isTokenValid()) {
+      console.log("🔑 Token expired, clearing and re-authenticating...");
+      setAccessToken(null);
+    }
+    
+    if (accessToken && isTokenValid()) return accessToken;
 
     if (!wallet.publicKey || !wallet.signMessage) {
       toast.error("Wallet not properly connected");
@@ -85,6 +154,42 @@ export default function LostMessage({ roomId }: LostMessageProps) {
     }
   };
 
+  async function claimTournamentPrize() {
+    if (!tournamentId || !wallet.publicKey || prizeClaimed) return;
+    
+    setClaimingPrize(true);
+    try {
+      console.log("💰 Claiming tournament prize...");
+      
+      const response = await fetch('/api/tournaments/claim-prize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tournamentId,
+          playerAddress: wallet.publicKey.toString(),
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || "Failed to claim prize");
+      }
+
+      setPrizeClaimed(true);
+      toast.success(`💰 Prize claimed! ${data.prize.amount} CKRA transferred to your wallet!`, {
+        autoClose: 5000,
+      });
+      
+      console.log("✅ Prize claimed successfully:", data);
+    } catch (error) {
+      console.error("Failed to claim prize:", error);
+      toast.error(`Failed to claim prize: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setClaimingPrize(false);
+    }
+  }
+
   async function claimXP() {
         try {
            if (!wallet.publicKey) {
@@ -92,9 +197,17 @@ export default function LostMessage({ roomId }: LostMessageProps) {
              return;
            }
 
-           if (!user?.profiles || user.profiles.length === 0) {
-             toast.error("No profile found. Please create a profile first.");
-             return;
+           // Check if user profiles are loaded
+           if (!user || !user.profiles || user.profiles.length === 0) {
+             // Try to refresh user data first
+             console.log("🔄 User profiles not loaded, refreshing...");
+             await refreshUser();
+             
+             // Check again after refresh
+             if (!user?.profiles || user.profiles.length === 0) {
+               toast.error("No profile found. Please create a profile first or refresh the page.");
+               return;
+             }
            }
 
            setIsClaiming(true);
@@ -197,6 +310,19 @@ export default function LostMessage({ roomId }: LostMessageProps) {
             throw new Error('Chakra mint transaction failed');
            }
 
+           // Mark rewards as claimed in the game room
+           const { updateDoc, doc } = await import("firebase/firestore");
+           const { db } = await import("@/config/firebase");
+           const gameRoomRef = doc(db, "gameRooms", roomId);
+           await updateDoc(gameRoomRef, {
+             rewardsClaimed: true,
+             rewardsClaimedAt: Date.now(),
+             rewardsClaimedBy: wallet.publicKey.toString(),
+           });
+           
+           // Update local state so button is disabled
+           setHasClaimed(true);
+
            refreshUser();
            router.push("/lobby");
         } catch (error) {
@@ -236,6 +362,24 @@ export default function LostMessage({ roomId }: LostMessageProps) {
                 </span>
               </div>
             )}
+            {isTournamentMatch && tournamentPrize > 0 && (
+              <div className="bg-green-400/20 border-2 border-green-400 rounded-lg px-4 py-2 mt-2">
+                <span className="text-green-400 font-bold text-lg">
+                  🏆 {tournamentPosition} Place Prize
+                </span>
+                <div className="text-yellow-400 font-bold text-sm mt-1">
+                  Won {tournamentPrize} CKRA!
+                  {prizeClaimed && " ✅"}
+                </div>
+              </div>
+            )}
+            {isTournamentMatch && tournamentPrize === 0 && (
+              <div className="bg-gray-400/20 border-2 border-gray-400 rounded-lg px-4 py-2 mt-2">
+                <span className="text-gray-400 font-bold text-sm">
+                  Tournament Match - Better luck next time!
+                </span>
+              </div>
+            )}
           </div>
           <Button
             onClick={() => router.push("/")}
@@ -251,6 +395,15 @@ export default function LostMessage({ roomId }: LostMessageProps) {
             <img src="/exit.png" alt="winner-bg" width={24} height={24} /> Exit
             Game
           </Button>
+          {tournamentPrize > 0 && !prizeClaimed && (
+            <Button
+              onClick={() => claimTournamentPrize()}
+              disabled={claimingPrize}
+              className="border-none bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-700 hover:to-orange-700 text-white cursor-pointer font-bold text-[12px] w-[190px] h-[38px] rounded-[4px]"
+            >
+              {claimingPrize ? "Claiming..." : `💰 Claim ${tournamentPrize} CKRA`}
+            </Button>
+          )}
           <Button
             onClick={() => claimXP()}
             disabled={isClaiming || hasClaimed}

@@ -15,18 +15,71 @@ export default function CreateTournamentPage() {
   const [formData, setFormData] = useState({
     name: "",
     entryFee: 10,
-    maxParticipants: 8 as TournamentSize,
+    maxParticipants: 4 as TournamentSize,
+    numberOfWinners: 2,
     description: "",
-    first: 60,
+    first: 70,
     second: 30,
-    third: 10,
+    third: 0,
+    fourth: 0,
+    fifth: 0,
   });
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleInputChange = (field: string, value: string | number) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+    setFormData((prev) => {
+      const updated = { ...prev, [field]: value };
+      
+      // Auto-adjust prize split when number of winners changes
+      if (field === 'numberOfWinners') {
+        const numWinners = value as number;
+        if (numWinners === 1) {
+          updated.first = 100;
+          updated.second = 0;
+          updated.third = 0;
+          updated.fourth = 0;
+          updated.fifth = 0;
+        } else if (numWinners === 2) {
+          updated.first = 70;
+          updated.second = 30;
+          updated.third = 0;
+          updated.fourth = 0;
+          updated.fifth = 0;
+        } else if (numWinners === 3) {
+          updated.first = 60;
+          updated.second = 30;
+          updated.third = 10;
+          updated.fourth = 0;
+          updated.fifth = 0;
+        } else if (numWinners === 4) {
+          updated.first = 50;
+          updated.second = 30;
+          updated.third = 15;
+          updated.fourth = 5;
+          updated.fifth = 0;
+        } else if (numWinners === 5) {
+          updated.first = 50;
+          updated.second = 25;
+          updated.third = 15;
+          updated.fourth = 7;
+          updated.fifth = 3;
+        }
+      }
+      
+      // Auto-adjust numberOfWinners when tournament size changes
+      if (field === 'maxParticipants') {
+        const size = value as TournamentSize;
+        if (size === 2) {
+          updated.numberOfWinners = 2; // Default for 2-player
+        } else {
+          updated.numberOfWinners = Math.min(prev.numberOfWinners, Math.min(5, size));
+        }
+      }
+      
+      return updated;
+    });
     setError(null);
   };
 
@@ -49,7 +102,7 @@ export default function CreateTournamentPage() {
       return;
     }
 
-    const totalPercentage = formData.first + formData.second + formData.third;
+    const totalPercentage = formData.first + formData.second + formData.third + formData.fourth + formData.fifth;
     if (totalPercentage !== 100) {
       setError("Prize split percentages must add up to 100%");
       return;
@@ -61,14 +114,17 @@ export default function CreateTournamentPage() {
     try {
       const prizeSplit: PrizeSplit = {
         first: formData.first,
-        second: formData.second,
-        third: formData.third,
+        second: formData.second || undefined,
+        third: formData.third || undefined,
+        fourth: formData.fourth || undefined,
+        fifth: formData.fifth || undefined,
       };
 
       const requestBody: CreateTournamentRequest = {
         name: formData.name.trim(),
         entryFee: formData.entryFee,
         maxParticipants: formData.maxParticipants,
+        numberOfWinners: formData.numberOfWinners,
         prizeSplit,
         description: formData.description.trim(),
         hostAddress: publicKey.toString(),
@@ -180,15 +236,15 @@ export default function CreateTournamentPage() {
               <Label className="text-white text-lg mb-2 block">
                 Tournament Size *
               </Label>
-              <div className="grid grid-cols-3 gap-4">
-                {[8, 16, 32].map((size) => (
+              <div className="grid grid-cols-3 gap-3 mb-2">
+                {[2, 4, 8].map((size) => (
                   <button
                     key={size}
                     type="button"
                     onClick={() =>
                       handleInputChange("maxParticipants", size as TournamentSize)
                     }
-                    className={`py-3 px-6 rounded-lg font-semibold transition-all ${
+                    className={`py-3 px-4 rounded-lg font-semibold transition-all ${
                       formData.maxParticipants === size
                         ? "bg-purple-600 text-white border-2 border-purple-400"
                         : "bg-gray-700 text-gray-300 border-2 border-gray-600 hover:bg-gray-600"
@@ -198,14 +254,76 @@ export default function CreateTournamentPage() {
                   </button>
                 ))}
               </div>
+              <div className="grid grid-cols-2 gap-3">
+                {[16, 32].map((size) => (
+                  <button
+                    key={size}
+                    type="button"
+                    onClick={() =>
+                      handleInputChange("maxParticipants", size as TournamentSize)
+                    }
+                    className={`py-3 px-4 rounded-lg font-semibold transition-all ${
+                      formData.maxParticipants === size
+                        ? "bg-purple-600 text-white border-2 border-purple-400"
+                        : "bg-gray-700 text-gray-300 border-2 border-gray-600 hover:bg-gray-600"
+                    }`}
+                  >
+                    {size} Players
+                  </button>
+                ))}
+              </div>
+              <p className="text-gray-400 text-sm mt-2">
+                {formData.maxParticipants === 2 && "⚡ Quick 1v1 showdown"}
+                {formData.maxParticipants === 4 && "🎯 Fast 4-player bracket"}
+                {formData.maxParticipants === 8 && "🎮 Classic 8-player tournament"}
+                {formData.maxParticipants === 16 && "🏆 Medium tournament"}
+                {formData.maxParticipants === 32 && "👑 Epic large-scale tournament"}
+              </p>
+            </div>
+
+            {/* Number of Winners */}
+            <div>
+              <Label className="text-white text-lg mb-2 block">
+                Number of Winners *
+              </Label>
+              <div className="grid grid-cols-5 gap-2">
+                {[1, 2, 3, 4, 5].map((num) => {
+                  const maxAllowed = formData.maxParticipants === 2 ? 2 : Math.min(5, formData.maxParticipants);
+                  const isDisabled = num > maxAllowed;
+                  
+                  return (
+                    <button
+                      key={num}
+                      type="button"
+                      onClick={() => !isDisabled && handleInputChange("numberOfWinners", num)}
+                      disabled={isDisabled}
+                      className={`py-3 px-4 rounded-lg font-semibold transition-all ${
+                        formData.numberOfWinners === num
+                          ? "bg-green-600 text-white border-2 border-green-400"
+                          : isDisabled
+                          ? "bg-gray-800 text-gray-600 border-2 border-gray-700 cursor-not-allowed"
+                          : "bg-gray-700 text-gray-300 border-2 border-gray-600 hover:bg-gray-600"
+                      }`}
+                    >
+                      {num}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-gray-400 text-xs mt-2">
+                {formData.maxParticipants === 2 
+                  ? "2-player tournaments: Max 2 winners" 
+                  : `${formData.maxParticipants}-player tournament: Max ${Math.min(5, formData.maxParticipants)} winners`}
+              </p>
             </div>
 
             {/* Prize Split */}
             <div>
               <Label className="text-white text-lg mb-3 block">
-                Prize Distribution *
+                Prize Distribution * (Must total 100%)
               </Label>
               <div className="space-y-4">
+                {/* 1st Place - Always shown */}
                 <div className="flex items-center gap-4">
                   <Label htmlFor="first" className="text-gray-300 w-24">
                     🥇 1st Place
@@ -227,59 +345,113 @@ export default function CreateTournamentPage() {
                   </span>
                 </div>
 
-                <div className="flex items-center gap-4">
-                  <Label htmlFor="second" className="text-gray-300 w-24">
-                    🥈 2nd Place
-                  </Label>
-                  <Input
-                    id="second"
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={formData.second}
-                    onChange={(e) =>
-                      handleInputChange("second", parseInt(e.target.value) || 0)
-                    }
-                    className="bg-gray-700 border-gray-600 text-white w-20"
-                  />
-                  <span className="text-white">%</span>
-                  <span className="text-blue-400 font-semibold ml-auto">
-                    {((formData.entryFee * formData.maxParticipants * formData.second) / 100).toFixed(0)} 💎
-                  </span>
-                </div>
+                {/* 2nd Place - Show if numberOfWinners >= 2 */}
+                {formData.numberOfWinners >= 2 && (
+                  <div className="flex items-center gap-4">
+                    <Label htmlFor="second" className="text-gray-300 w-24">
+                      🥈 2nd Place
+                    </Label>
+                    <Input
+                      id="second"
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={formData.second}
+                      onChange={(e) =>
+                        handleInputChange("second", parseInt(e.target.value) || 0)
+                      }
+                      className="bg-gray-700 border-gray-600 text-white w-20"
+                    />
+                    <span className="text-white">%</span>
+                    <span className="text-blue-400 font-semibold ml-auto">
+                      {((formData.entryFee * formData.maxParticipants * formData.second) / 100).toFixed(0)} 💎
+                    </span>
+                  </div>
+                )}
 
-                <div className="flex items-center gap-4">
-                  <Label htmlFor="third" className="text-gray-300 w-24">
-                    🥉 3rd Place
-                  </Label>
-                  <Input
-                    id="third"
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={formData.third}
-                    onChange={(e) =>
-                      handleInputChange("third", parseInt(e.target.value) || 0)
-                    }
-                    className="bg-gray-700 border-gray-600 text-white w-20"
-                  />
-                  <span className="text-white">%</span>
-                  <span className="text-yellow-400 font-semibold ml-auto">
-                    {((formData.entryFee * formData.maxParticipants * formData.third) / 100).toFixed(0)} 💎
-                  </span>
-                </div>
+                {/* 3rd Place - Show if numberOfWinners >= 3 */}
+                {formData.numberOfWinners >= 3 && (
+                  <div className="flex items-center gap-4">
+                    <Label htmlFor="third" className="text-gray-300 w-24">
+                      🥉 3rd Place
+                    </Label>
+                    <Input
+                      id="third"
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={formData.third}
+                      onChange={(e) =>
+                        handleInputChange("third", parseInt(e.target.value) || 0)
+                      }
+                      className="bg-gray-700 border-gray-600 text-white w-20"
+                    />
+                    <span className="text-white">%</span>
+                    <span className="text-yellow-400 font-semibold ml-auto">
+                      {((formData.entryFee * formData.maxParticipants * formData.third) / 100).toFixed(0)} 💎
+                    </span>
+                  </div>
+                )}
+
+                {/* 4th Place - Show if numberOfWinners >= 4 */}
+                {formData.numberOfWinners >= 4 && (
+                  <div className="flex items-center gap-4">
+                    <Label htmlFor="fourth" className="text-gray-300 w-24">
+                      🏅 4th Place
+                    </Label>
+                    <Input
+                      id="fourth"
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={formData.fourth}
+                      onChange={(e) =>
+                        handleInputChange("fourth", parseInt(e.target.value) || 0)
+                      }
+                      className="bg-gray-700 border-gray-600 text-white w-20"
+                    />
+                    <span className="text-white">%</span>
+                    <span className="text-orange-400 font-semibold ml-auto">
+                      {((formData.entryFee * formData.maxParticipants * formData.fourth) / 100).toFixed(0)} 💎
+                    </span>
+                  </div>
+                )}
+
+                {/* 5th Place - Show if numberOfWinners >= 5 */}
+                {formData.numberOfWinners >= 5 && (
+                  <div className="flex items-center gap-4">
+                    <Label htmlFor="fifth" className="text-gray-300 w-24">
+                      🏅 5th Place
+                    </Label>
+                    <Input
+                      id="fifth"
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={formData.fifth}
+                      onChange={(e) =>
+                        handleInputChange("fifth", parseInt(e.target.value) || 0)
+                      }
+                      className="bg-gray-700 border-gray-600 text-white w-20"
+                    />
+                    <span className="text-white">%</span>
+                    <span className="text-pink-400 font-semibold ml-auto">
+                      {((formData.entryFee * formData.maxParticipants * formData.fifth) / 100).toFixed(0)} 💎
+                    </span>
+                  </div>
+                )}
 
                 <div className="pt-2 border-t border-gray-700">
                   <div className="flex justify-between items-center">
                     <span className="text-gray-400">Total:</span>
                     <span
                       className={`font-semibold ${
-                        formData.first + formData.second + formData.third === 100
+                        formData.first + formData.second + formData.third + formData.fourth + formData.fifth === 100
                           ? "text-green-400"
                           : "text-red-400"
                       }`}
                     >
-                      {formData.first + formData.second + formData.third}%
+                      {formData.first + formData.second + formData.third + formData.fourth + formData.fifth}%
                     </span>
                   </div>
                 </div>

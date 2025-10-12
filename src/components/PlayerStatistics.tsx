@@ -20,18 +20,26 @@ export default function PlayerStatistics() {
   const [statistics, setStatistics] = useState({
     totalBattles: 0,
     totalWins: 0,
+    totalLosses: 0,
     totalEarnings: 0
   });
 
   const calculateStatistics = (rooms: GameRoomDocument[]) => {
+    const userAddress = wallet.publicKey?.toString();
+    
     const stats = rooms.reduce((acc, room) => {
-      if (room.status === 'finished') {
+      if (room.status === 'finished' && room.gameState?.winner) {
         acc.totalBattles++;
   
-        const gameState = room.gameState;
-        if (gameState) {
-          // const isPlayer1 = gameState.player1.id === address;
-          // const isPlayer2 = gameState.player2.id === address;
+        // Determine who won (same logic as leaderboard)
+        const winnerId = room.gameState.winner === 'player1' 
+          ? room.gameState.player1.id 
+          : room.gameState.player2.id;
+        
+        if (winnerId === userAddress) {
+          acc.totalWins++;
+        } else {
+          acc.totalLosses++;
         }
       }
 
@@ -39,6 +47,7 @@ export default function PlayerStatistics() {
     }, {
       totalBattles: 0,
       totalWins: 0,
+      totalLosses: 0,
       totalEarnings: 0
     });
 
@@ -103,8 +112,12 @@ export default function PlayerStatistics() {
           </span>
         </div>
         <div className="flex flex-col">
-          <span className="font-bold text-[16px] text-white mb-2 block">{statistics.totalWins}</span>
+          <span className="font-bold text-[16px] text-green-400 mb-2 block">{statistics.totalWins}</span>
           <span className="font-normal text-[15px] text-white block">Wins</span>
+        </div>
+        <div className="flex flex-col">
+          <span className="font-bold text-[16px] text-red-400 mb-2 block">{statistics.totalLosses}</span>
+          <span className="font-normal text-[15px] text-white block">Losses</span>
         </div>
       </div>
       <div className="h-px bg-[#6A6868]"></div>
@@ -143,7 +156,7 @@ export default function PlayerStatistics() {
               </div>
               <div>
                 <span className="text-[11px] text-white">
-                {new Date(room.createdAt.toDate()).toLocaleString()}
+                {new Date(typeof room.createdAt === 'number' ? room.createdAt : room.createdAt.toDate()).toLocaleString()}
                 </span>
               </div>
             </div>

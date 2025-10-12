@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { doc, getDoc, updateDoc, arrayUnion, increment } from "firebase/firestore";
+import { doc, getDoc, updateDoc, arrayUnion, increment, setDoc } from "firebase/firestore";
 import { db } from "@/config/firebase";
 import { Connection } from "@solana/web3.js";
 import { JoinTournamentRequest, TournamentParticipant, Tournament } from "@/types/tournament";
 import { CHARACTERS } from "@/lib/characters";
+import { generateBracket } from "@/lib/tournamentBracket";
 
 const PROJECT_AUTHORITY = process.env.PROJECT_AUTHORITY as string;
 const SOLANA_RPC_URL = process.env.SOLANA_RPC_URL || "https://rpc.test.honeycombprotocol.com";
@@ -149,19 +150,102 @@ export async function POST(request: NextRequest) {
 
     // Update tournament
     // Only increment prize pool if not admin bypass
-    if (isAdminBypass) {
-      await updateDoc(tournamentRef, {
-        participants: arrayUnion(participant),
-        currentParticipants: increment(1),
-        // Don't increment prize pool for admin (no payment made)
-      });
+    const updateData: Record<string, unknown> = {
+      participants: arrayUnion(participant),
+      currentParticipants: increment(1),
+    };
+
+    if (!isAdminBypass) {
+      updateData.prizePool = increment(tournament.entryFee);
+    }
+
+    // Check if tournament will be full after this join
+    const willBeFull = tournament.currentParticipants + 1 >= tournament.maxParticipants;
+
+    if (willBeFull) {
+      // Generate bracket when tournament fills
+      const allParticipants = [...tournament.participants, participant];
+      const bracket = generateBracket(allParticipants, tournament.maxParticipants);
+      
+      // Create game rooms for first round matches
+      for (const match of bracket) {
+        if (match.player1 && match.player2 && match.round === bracket[0].round) {
+          // Only create rooms for first round matches with both players assigned
+          const gameRoomId = `room_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+          
+          const player1Character = CHARACTERS.find(c => c.id === match.player1?.characterId);
+          const player2Character = CHARACTERS.find(c => c.id === match.player2?.characterId);
+          
+          if (player1Character && player2Character) {
+            // Create game room in Firebase
+            const gameRoomRef = doc(db, "gameRooms", gameRoomId);
+            await setDoc(gameRoomRef, {
+              id: gameRoomId,
+              createdBy: match.player1.address,
+              createdAt: Date.now(),
+              status: "character-select",
+              isTournamentMatch: true,
+              tournamentId,
+              matchId: match.matchId,
+              players: {
+                [match.player1.address]: {
+                  wallet: match.player1.address,
+                  role: "creator",
+                  characterId: match.player1.characterId,
+                  diceRoll: null,
+                },
+                [match.player2.address]: {
+                  wallet: match.player2.address,
+                  role: "challenger",
+                  characterId: match.player2.characterId,
+                  diceRoll: null,
+                },
+              },
+              gameState: {
+                gameStatus: "character-select",
+                currentTurn: null,
+                turnCount: 0,
+                player1: {
+                  id: match.player1.address,
+                  character: player1Character,
+                  currentHealth: player1Character.baseHealth,
+                  maxHealth: player1Character.baseHealth,
+                  defenseInventory: {},
+                  buffs: [],
+                },
+                player2: {
+                  id: match.player2.address,
+                  character: player2Character,
+                  currentHealth: player2Character.baseHealth,
+                  maxHealth: player2Character.baseHealth,
+                  defenseInventory: {},
+                  buffs: [],
+                },
+                diceRolls: {},
+                gameHistory: [],
+              },
+            });
+            
+            // Store room ID in the match
+            match.roomId = gameRoomId;
+            console.log(`✅ Created game room ${gameRoomId} for match ${match.matchId}`);
+          }
+        }
+      }
+      
+      updateData.bracket = bracket;
+      updateData.status = 'in_progress';
+      updateData.startedAt = Date.now();
+      
+      console.log(`🏆 Tournament ${tournamentId} is now full! Bracket generated with ${bracket.length} matches and game rooms created`);
+    }
+
+    await updateDoc(tournamentRef, updateData);
+
+    if (willBeFull) {
+      console.log("✨ Tournament started! Players can now begin their matches.");
+    } else if (isAdminBypass) {
       console.log("Admin joined without payment - prize pool unchanged");
-    } else {
-      await updateDoc(tournamentRef, {
-        participants: arrayUnion(participant),
-        currentParticipants: increment(1),
-        prizePool: increment(tournament.entryFee),
-      });
     }
 
     return NextResponse.json({

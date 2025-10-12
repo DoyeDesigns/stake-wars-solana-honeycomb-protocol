@@ -28,33 +28,135 @@ export default function WonMessage({ roomId }: WonMessageProps) {
   const [wagerAmount, setWagerAmount] = useState(0);
   const [wagerId, setWagerId] = useState<string | null>(null);
   const [wagerSettled, setWagerSettled] = useState(false);
+  const [isTournamentMatch, setIsTournamentMatch] = useState(false);
+  const [tournamentId, setTournamentId] = useState<string | null>(null);
+  const [matchId, setMatchId] = useState<string | null>(null);
+  const [tournamentCompleted, setTournamentCompleted] = useState(false);
+  const [tournamentPrize, setTournamentPrize] = useState<number>(0);
+  const [tournamentPosition, setTournamentPosition] = useState<string>("");
+  const [prizeClaimed, setPrizeClaimed] = useState(false);
+  const [claimingPrize, setClaimingPrize] = useState(false);
 
-  // Check if this is a wager match
+  // Check if this is a wager match or tournament match
   useEffect(() => {
-    const checkWagerMatch = async () => {
+    const checkMatchType = async () => {
       try {
         const gameRoomRef = doc(db, "gameRooms", roomId);
         const gameRoomSnap = await getDoc(gameRoomRef);
         
         if (gameRoomSnap.exists()) {
           const gameData = gameRoomSnap.data();
+          
+          // Check if rewards already claimed
+          if (gameData.rewardsClaimed) {
+            setHasClaimed(true);
+            console.log("✅ Rewards already claimed for this game");
+          }
+          
+          // Check for wager match
           if (gameData.isWagerMatch && gameData.wagerId) {
             setIsWagerMatch(true);
             setWagerAmount(gameData.wagerAmount || 0);
             setWagerId(gameData.wagerId);
           }
+          
+          // Check for tournament match and auto-complete it
+          if (gameData.isTournamentMatch && gameData.tournamentId && gameData.matchId) {
+            setIsTournamentMatch(true);
+            setTournamentId(gameData.tournamentId);
+            setMatchId(gameData.matchId);
+            
+            // Auto-complete tournament match immediately so prize button shows
+            if (wallet.publicKey) {
+              await completeTournamentMatchAuto(
+                gameData.tournamentId, 
+                gameData.matchId, 
+                wallet.publicKey.toString()
+              );
+            }
+          }
         }
       } catch (error) {
-        console.error("Error checking wager match:", error);
+        console.error("Error checking match type:", error);
       }
     };
 
-    checkWagerMatch();
-  }, [roomId]);
+    checkMatchType();
+  }, [roomId, wallet.publicKey]);
+
+  // Auto-complete tournament match on load (separate from claim flow)
+  const completeTournamentMatchAuto = async (
+    tournamentIdParam: string, 
+    matchIdParam: string, 
+    winnerIdParam: string
+  ): Promise<void> => {
+    if (tournamentCompleted) return; // Already completed
+    
+    try {
+      console.log("🏆 Auto-completing tournament match...", { tournamentIdParam, matchIdParam, roomId });
+      
+      const response = await fetch('/api/tournaments/matches/complete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tournamentId: tournamentIdParam,
+          matchId: matchIdParam,
+          winnerId: winnerIdParam,
+          roomId,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || "Failed to complete tournament match");
+      }
+
+      setTournamentCompleted(true);
+      
+      if (data.tournamentComplete) {
+        // Fetch tournament data to get prize info
+        const tournamentResponse = await fetch(`/api/tournaments/${tournamentIdParam}`);
+        const tournamentData = await tournamentResponse.json();
+        
+        if (tournamentData.success && tournamentData.tournament.prizeDistribution) {
+          const myPrize = tournamentData.tournament.prizeDistribution.find(
+            (p: { address: string; amount: number; position: string; claimed?: boolean }) => 
+              p.address === winnerIdParam
+          );
+          
+          if (myPrize) {
+            setTournamentPrize(myPrize.amount);
+            setTournamentPosition(myPrize.position);
+            setPrizeClaimed(myPrize.claimed || false);
+            
+            if (!myPrize.claimed) {
+              toast.success(`🏆 Tournament completed! You finished ${myPrize.position} and won ${myPrize.amount} CKRA! Scroll down to claim.`, {
+                autoClose: 7000,
+              });
+            }
+          }
+        }
+      } else {
+        toast.success("✅ Match won! You've advanced to the next round!");
+      }
+    } catch (error) {
+      console.error("Failed to complete tournament match:", error);
+      // Don't show error to user on auto-complete, just log it
+    }
+  };
 
   // Function to get or refresh access token
   const getAccessToken = async (): Promise<string | null> => {
-    if (accessToken) return accessToken;
+    const { isTokenValid } = useAuthStore.getState();
+    
+    // Check if token is expired
+    if (accessToken && !isTokenValid()) {
+      console.log("🔑 Token expired, clearing and re-authenticating...");
+      setAccessToken(null);
+    }
+    
+    if (accessToken && isTokenValid()) return accessToken;
 
     if (!wallet.publicKey || !wallet.signMessage) {
       toast.error("Wallet not properly connected");
@@ -89,9 +191,22 @@ export default function WonMessage({ roomId }: WonMessageProps) {
   };
 
   async function settleWager() {
-    if (!wagerId || !wallet.publicKey) return;
+    if (!wagerId || !wallet.publicKey || wagerSettled) return;
     
     try {
+      // Check wager status first
+      const checkResponse = await fetch(`/api/wager/list?player=${wallet.publicKey.toString()}`);
+      const checkData = await checkResponse.json();
+      
+      if (checkData.success) {
+        const wager = checkData.wagerGames.find((w: { id: string; status: string }) => w.id === wagerId);
+        if (wager && wager.status === 'completed') {
+          console.log("Wager already settled, skipping...");
+          setWagerSettled(true);
+          return;
+        }
+      }
+      
       const response = await fetch('/api/wager/complete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -104,14 +219,120 @@ export default function WonMessage({ roomId }: WonMessageProps) {
       const data = await response.json();
 
       if (!response.ok || !data.success) {
+        // If already completed, just mark as settled
+        if (data.error?.includes('not in progress')) {
+          setWagerSettled(true);
+          return;
+        }
         throw new Error(data.error || "Failed to settle wager");
       }
 
       setWagerSettled(true);
       toast.success(`🎉 Wager settled! You won ${wagerAmount * 2} CKRA!`);
     } catch (error) {
+      console.error("Failed to settle wager:", error);
       toast.error(`Failed to settle wager: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      throw error; // Re-throw to stop the claim flow
+      // Don't throw - allow stats update to continue
+    }
+  }
+
+  async function completeTournamentMatch() {
+    if (!tournamentId || !matchId || !wallet.publicKey) return;
+    
+    try {
+      console.log("🏆 Completing tournament match...", { tournamentId, matchId, roomId });
+      
+      const response = await fetch('/api/tournaments/matches/complete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tournamentId,
+          matchId,
+          winnerId: wallet.publicKey.toString(),
+          roomId,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || "Failed to complete tournament match");
+      }
+
+      setTournamentCompleted(true);
+      
+      if (data.tournamentComplete) {
+        // Fetch tournament data to get prize info
+        const tournamentResponse = await fetch(`/api/tournaments/${tournamentId}`);
+        const tournamentData = await tournamentResponse.json();
+        
+        if (tournamentData.success && tournamentData.tournament.prizeDistribution) {
+          const myPrize = tournamentData.tournament.prizeDistribution.find(
+            (p: { address: string; amount: number; position: string }) => 
+              p.address === wallet.publicKey?.toString()
+          );
+          
+          if (myPrize) {
+            setTournamentPrize(myPrize.amount);
+            setTournamentPosition(myPrize.position);
+            setPrizeClaimed(myPrize.claimed || false);
+            
+            if (!myPrize.claimed) {
+              toast.success(`🏆 Tournament completed! You finished ${myPrize.position} and won ${myPrize.amount} CKRA! Click to claim.`, {
+                autoClose: 7000,
+              });
+            } else {
+              toast.success(`🏆 Tournament completed! You finished ${myPrize.position}!`);
+            }
+          } else {
+            toast.success("🏆 Tournament completed! You're the champion!");
+          }
+        } else {
+          toast.success("🏆 Tournament completed! You're the champion!");
+        }
+      } else {
+        toast.success("✅ Match won! You've advanced to the next round!");
+      }
+    } catch (error) {
+      console.error("Failed to complete tournament match:", error);
+      toast.error(`Failed to complete tournament match: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      // Don't throw - allow stats update to continue
+    }
+  }
+
+  async function claimTournamentPrize() {
+    if (!tournamentId || !wallet.publicKey || prizeClaimed) return;
+    
+    setClaimingPrize(true);
+    try {
+      console.log("💰 Claiming tournament prize...");
+      
+      const response = await fetch('/api/tournaments/claim-prize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tournamentId,
+          playerAddress: wallet.publicKey.toString(),
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || "Failed to claim prize");
+      }
+
+      setPrizeClaimed(true);
+      toast.success(`💰 Prize claimed! ${data.prize.amount} CKRA transferred to your wallet!`, {
+        autoClose: 5000,
+      });
+      
+      console.log("✅ Prize claimed successfully:", data);
+    } catch (error) {
+      console.error("Failed to claim prize:", error);
+      toast.error(`Failed to claim prize: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setClaimingPrize(false);
     }
   }
 
@@ -122,16 +343,32 @@ export default function WonMessage({ roomId }: WonMessageProps) {
            return;
          }
 
-         // If this is a wager match, settle it first
+         // If this is a wager match, settle it first (only if not already settled)
          if (isWagerMatch && wagerId && !wagerSettled) {
            console.log("🎰 Settling wager before claiming rewards...");
            await settleWager();
-           console.log("✅ Wager settled successfully");
+           console.log("✅ Wager settled (or already settled)");
          }
 
-         if (!user?.profiles || user.profiles.length === 0) {
-           toast.error("No profile found. Please create a profile first.");
-           return;
+         // Tournament match should already be completed from auto-complete
+         // If somehow not completed yet, complete it now
+         if (isTournamentMatch && tournamentId && matchId && !tournamentCompleted) {
+           console.log("🏆 Tournament match not auto-completed, completing now...");
+           await completeTournamentMatch();
+           console.log("✅ Tournament match completed");
+         }
+
+         // Check if user profiles are loaded
+         if (!user || !user.profiles || user.profiles.length === 0) {
+           // Try to refresh user data first
+           console.log("🔄 User profiles not loaded, refreshing...");
+           await refreshUser();
+           
+           // Check again after refresh
+           if (!user?.profiles || user.profiles.length === 0) {
+             toast.error("No profile found. Please create a profile first or refresh the page.");
+             return;
+           }
          }
 
          setIsClaiming(true);
@@ -249,8 +486,21 @@ export default function WonMessage({ roomId }: WonMessageProps) {
            throw new Error("Chakra mint transaction failed");
          }
 
-         refreshUser();
-         router.push("/lobby");
+           // Mark rewards as claimed in the game room
+           const { updateDoc, doc } = await import("firebase/firestore");
+           const { db } = await import("@/config/firebase");
+           const gameRoomRef = doc(db, "gameRooms", roomId);
+           await updateDoc(gameRoomRef, {
+             rewardsClaimed: true,
+             rewardsClaimedAt: Date.now(),
+             rewardsClaimedBy: wallet.publicKey.toString(),
+           });
+           
+           // Update local state so button is disabled
+           setHasClaimed(true);
+
+           refreshUser();
+           router.push("/lobby");
       } catch (error) {
         console.error("❌ Error in claimXP flow:", error);
         console.error("Error details:", error instanceof Error ? error.message : error);
@@ -285,6 +535,19 @@ export default function WonMessage({ roomId }: WonMessageProps) {
                   </span>
                 </div>
               )}
+              {isTournamentMatch && (
+                <div className="bg-purple-400/20 border-2 border-purple-400 rounded-lg px-4 py-2 mt-2">
+                  <span className="text-purple-400 font-bold text-lg">
+                    🏆 Tournament Match Won!
+                  </span>
+                  {tournamentPrize > 0 && (
+                    <div className="text-yellow-400 font-bold text-sm mt-1">
+                      {tournamentPosition} Place Prize: {tournamentPrize} CKRA
+                      {prizeClaimed && " ✅"}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
             <Button onClick={() => router.push('/')} className="border-none cursor-pointer bg-white text-[#381B5D] font-bold text-[12px] w-[190px] h-[38px] rounded-[4px]">
               <img
@@ -302,6 +565,15 @@ export default function WonMessage({ roomId }: WonMessageProps) {
               <img src="/exit.png" alt="winner-bg" width={24} height={24} />{" "}
               Exit Game
             </Button>
+            {tournamentPrize > 0 && !prizeClaimed && (
+              <Button
+                onClick={() => claimTournamentPrize()}
+                disabled={claimingPrize}
+                className="border-none bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-700 hover:to-orange-700 text-white cursor-pointer font-bold text-[12px] w-[190px] h-[38px] rounded-[4px]"
+              >
+                {claimingPrize ? "Claiming..." : `💰 Claim ${tournamentPrize} CKRA`}
+              </Button>
+            )}
             <Button
               onClick={() => claimXP()}
               disabled={isClaiming || hasClaimed}

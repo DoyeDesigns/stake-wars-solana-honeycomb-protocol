@@ -674,6 +674,18 @@ export default function WagerPage() {
                           )}
                         </div>
                       </div>
+
+                      {/* Join Game Button */}
+                      {wager.status === 'in_progress' && wager.gameRoomId && (
+                        <div className="ml-4">
+                          <Button
+                            onClick={() => router.push(`/game-play/${wager.gameRoomId}`)}
+                            className="bg-[#34681C] hover:bg-[#34681C]/80 text-white px-6 py-3 rounded-lg font-bold"
+                          >
+                            Join Game
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 );

@@ -6,11 +6,12 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import { sendClientTransactions } from "@honeycomb-protocol/edge-client/client/walletHelpers";
 import { client } from "@/utils/constants/client";
 import { Button } from "@/components/ui/button";
-import { Tournament } from "@/types/tournament";
+import { Tournament, BracketMatch } from "@/types/tournament";
 import { CHARACTERS, Character } from "@/lib/characters";
 import { checkChakraBalance } from "@/lib/tournamentPayment";
 import { characterAdressess } from "@/lib/charater-address";
 import { toast } from "react-toastify";
+import TournamentBracket from "@/components/TournamentBracket";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -40,6 +41,7 @@ export default function TournamentDetailsPage({ params }: PageProps) {
   const [selectedCharacter, setSelectedCharacter] = useState<Character | null>(null);
   const [balance, setBalance] = useState<number | null>(null);
   const [characterAbilities, setCharacterAbilities] = useState<Character[]>([]);
+  const [claimingPrize, setClaimingPrize] = useState(false);
 
   useEffect(() => {
     fetchTournament();
@@ -272,6 +274,65 @@ export default function TournamentDetailsPage({ params }: PageProps) {
     }
   };
 
+  const handleJoinMatch = async (match: BracketMatch): Promise<void> => {
+    if (!publicKey || !tournament || !match.roomId) return;
+
+    try {
+      // Validate player is in this match
+      if (match.player1?.address !== publicKey.toString() && 
+          match.player2?.address !== publicKey.toString()) {
+        toast.error("You are not a participant in this match");
+        return;
+      }
+
+      toast.success("Joining match...");
+      
+      // Redirect to existing game room
+      router.push(`/game-play/${match.roomId}`);
+      
+    } catch (error) {
+      console.error("Failed to join match:", error);
+      toast.error(`Failed to join match: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
+  const handleClaimPrize = async (): Promise<void> => {
+    if (!publicKey || !tournament) return;
+
+    setClaimingPrize(true);
+    try {
+      console.log("💰 Claiming tournament prize...");
+      
+      const response = await fetch('/api/tournaments/claim-prize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tournamentId: tournament.id,
+          playerAddress: publicKey.toString(),
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || "Failed to claim prize");
+      }
+
+      toast.success(`💰 Prize claimed! ${data.prize.amount} CKRA transferred to your wallet!`, {
+        autoClose: 5000,
+      });
+      
+      // Refresh tournament to update claimed status
+      await fetchTournament();
+      
+    } catch (error) {
+      console.error("Failed to claim prize:", error);
+      toast.error(`Failed to claim prize: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setClaimingPrize(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-violet-900 flex items-center justify-center">
@@ -315,6 +376,92 @@ export default function TournamentDetailsPage({ params }: PageProps) {
             ← Back to Tournaments
           </Button>
         </div>
+
+        {/* Winners & Prize Claiming - Show if completed */}
+        {tournament.status === 'completed' && tournament.prizeDistribution && tournament.prizeDistribution.length > 0 && (
+          <div className="mb-8">
+            <div className="bg-gradient-to-br from-yellow-900/30 to-purple-900/30 backdrop-blur-sm border-2 border-yellow-500/50 rounded-xl p-8">
+              <h2 className="text-3xl font-bold text-white mb-6 text-center">
+                🏆 Tournament Winners
+              </h2>
+              <div className="space-y-3">
+                {tournament.prizeDistribution.map((prize, index) => {
+                  const isCurrentPlayer = prize.address === publicKey?.toString();
+                  const positionEmoji = ['🥇', '🥈', '🥉', '🏅', '🏅'][index] || '🏅';
+                  
+                  return (
+                    <div
+                      key={prize.address}
+                      className={`bg-gray-900/50 rounded-lg p-5 border-2 ${
+                        isCurrentPlayer 
+                          ? 'border-green-500 ring-2 ring-green-500/50' 
+                          : 'border-gray-700'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          <span className="text-4xl">{positionEmoji}</span>
+                          <div>
+                            <p className="text-white font-bold text-lg">
+                              {prize.position} Place
+                              {isCurrentPlayer && <span className="text-green-400 ml-2">← You!</span>}
+                            </p>
+                            <p className="text-gray-400 text-sm font-mono">
+                              {prize.address.slice(0, 8)}...{prize.address.slice(-6)}
+                            </p>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center gap-4">
+                          <div className="text-right">
+                            <p className="text-yellow-400 text-2xl font-bold">
+                              {prize.amount} 💎
+                            </p>
+                            {prize.claimed ? (
+                              <p className="text-green-400 text-sm flex items-center gap-1 justify-end">
+                                ✅ Claimed
+                              </p>
+                            ) : (
+                              <p className="text-gray-400 text-sm">
+                                Not claimed yet
+                              </p>
+                            )}
+                          </div>
+                          
+                          {isCurrentPlayer && !prize.claimed && (
+                            <Button
+                              onClick={handleClaimPrize}
+                              disabled={claimingPrize}
+                              className="bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-700 hover:to-orange-700 text-white px-6 py-3 rounded-lg font-bold"
+                            >
+                              {claimingPrize ? "Claiming..." : "💰 Claim Prize"}
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Tournament Bracket - Show if in progress or completed */}
+        {(tournament.status === 'in_progress' || tournament.status === 'completed') && tournament.bracket && (
+          <div className="mb-8">
+            <div className="bg-gray-800/50 backdrop-blur-sm border-2 border-purple-500/30 rounded-xl p-8">
+              <h2 className="text-3xl font-bold text-white mb-6 text-center">
+                Tournament Bracket
+              </h2>
+              <TournamentBracket
+                bracket={tournament.bracket}
+                currentPlayerAddress={publicKey?.toString()}
+                onStartMatch={handleJoinMatch}
+              />
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main Info */}
@@ -366,7 +513,9 @@ export default function TournamentDetailsPage({ params }: PageProps) {
 
               {/* Prize Distribution */}
               <div className="bg-gray-900/50 rounded-lg p-4">
-                <h3 className="text-white font-semibold mb-3">Prize Distribution</h3>
+                <h3 className="text-white font-semibold mb-3">
+                  Prize Distribution ({tournament.numberOfWinners} {tournament.numberOfWinners === 1 ? 'Winner' : 'Winners'})
+                </h3>
                 <div className="space-y-2">
                   <div className="flex justify-between">
                     <span className="text-gray-300">🥇 1st Place</span>
@@ -374,18 +523,38 @@ export default function TournamentDetailsPage({ params }: PageProps) {
                       {tournament.prizeSplit.first}% ({((tournament.prizePool * tournament.prizeSplit.first) / 100).toFixed(0)} 💎)
                     </span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-300">🥈 2nd Place</span>
-                    <span className="text-blue-400 font-bold">
-                      {tournament.prizeSplit.second}% ({((tournament.prizePool * tournament.prizeSplit.second) / 100).toFixed(0)} 💎)
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-300">🥉 3rd Place</span>
-                    <span className="text-yellow-400 font-bold">
-                      {tournament.prizeSplit.third}% ({((tournament.prizePool * tournament.prizeSplit.third) / 100).toFixed(0)} 💎)
-                    </span>
-                  </div>
+                  {tournament.numberOfWinners >= 2 && tournament.prizeSplit.second && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-300">🥈 2nd Place</span>
+                      <span className="text-blue-400 font-bold">
+                        {tournament.prizeSplit.second}% ({((tournament.prizePool * tournament.prizeSplit.second) / 100).toFixed(0)} 💎)
+                      </span>
+                    </div>
+                  )}
+                  {tournament.numberOfWinners >= 3 && tournament.prizeSplit.third && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-300">🥉 3rd Place</span>
+                      <span className="text-yellow-400 font-bold">
+                        {tournament.prizeSplit.third}% ({((tournament.prizePool * tournament.prizeSplit.third) / 100).toFixed(0)} 💎)
+                      </span>
+                    </div>
+                  )}
+                  {tournament.numberOfWinners >= 4 && tournament.prizeSplit.fourth && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-300">🏅 4th Place</span>
+                      <span className="text-orange-400 font-bold">
+                        {tournament.prizeSplit.fourth}% ({((tournament.prizePool * tournament.prizeSplit.fourth) / 100).toFixed(0)} 💎)
+                      </span>
+                    </div>
+                  )}
+                  {tournament.numberOfWinners >= 5 && tournament.prizeSplit.fifth && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-300">🏅 5th Place</span>
+                      <span className="text-pink-400 font-bold">
+                        {tournament.prizeSplit.fifth}% ({((tournament.prizePool * tournament.prizeSplit.fifth) / 100).toFixed(0)} 💎)
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
 

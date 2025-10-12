@@ -1,5 +1,5 @@
 export type TournamentStatus = 'open' | 'in_progress' | 'completed' | 'cancelled';
-export type TournamentSize = 8 | 16 | 32;
+export type TournamentSize = 2 | 4 | 8 | 16 | 32;
 export type BracketRound = 'round_of_32' | 'round_of_16' | 'quarterfinals' | 'semifinals' | 'finals';
 
 export interface TournamentParticipant {
@@ -26,8 +26,19 @@ export interface BracketMatch {
 
 export interface PrizeSplit {
   first: number;
-  second: number;
-  third: number;
+  second?: number;
+  third?: number;
+  fourth?: number;
+  fifth?: number;
+}
+
+export interface PrizeDistribution {
+  address: string;
+  amount: number;
+  position: string;
+  claimed?: boolean;
+  claimedAt?: number;
+  transactionSignature?: string;
 }
 
 export interface Tournament {
@@ -37,6 +48,7 @@ export interface Tournament {
   hostName?: string;
   entryFee: number;
   maxParticipants: TournamentSize;
+  numberOfWinners: number;
   currentParticipants: number;
   prizePool: number;
   prizeSplit: PrizeSplit;
@@ -47,12 +59,16 @@ export interface Tournament {
   startedAt?: number;
   completedAt?: number;
   description?: string;
+  prizesDistributed?: boolean;
+  prizeDistribution?: PrizeDistribution[];
+  prizesDistributedAt?: number;
 }
 
 export interface CreateTournamentRequest {
   name: string;
   entryFee: number;
   maxParticipants: TournamentSize;
+  numberOfWinners?: number;
   prizeSplit?: PrizeSplit;
   description?: string;
   hostAddress: string;

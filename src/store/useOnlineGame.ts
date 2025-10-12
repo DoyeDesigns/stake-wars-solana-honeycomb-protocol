@@ -42,7 +42,15 @@ export interface GameRoomDocument {
   };
   createdAt: Timestamp;
   gameState?: GameState;
-  creatorTotalWins?: number; 
+  creatorTotalWins?: number;
+  rewardsClaimed?: boolean;
+  rewardsClaimedAt?: number;
+  rewardsClaimedBy?: string;
+  isWagerMatch?: boolean;
+  isTournamentMatch?: boolean;
+  wagerId?: string;
+  tournamentId?: string;
+  matchId?: string;
 }
 
 interface DefenseInventory {
