@@ -7,11 +7,9 @@ import { useWallet } from "@solana/wallet-adapter-react";
 
 const DiceRoll: React.FC = () => {
   const {
-    rollAndRecordDice,
     gameState,
     performAttack,
     addDefenseToInventory,
-    roomId,
   } = useOnlineGameStore();
   const [rollNumber, setRollNumber] = useState(0);
   const [isButtonDisabled, setIsButtonDisabled] = useState(false);
