@@ -18,7 +18,6 @@ type ConnectButtonProps = {
 };
 
 const PROJECT_ADDRESS = process.env.PROJECT_ADDRESS as string;
-const PROFILE_TREE = process.env.PROFILE_TREE as string;
 
 export const compactHash = (hash: string | null | undefined) => {
   if (!hash || typeof hash !== "string" || hash.length < 12) return "";
