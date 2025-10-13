@@ -12,6 +12,8 @@ const DEFAULT_PRIZE_SPLITS: Record<number, PrizeSplit> = {
   5: { first: 50, second: 25, third: 15, fourth: 7, fifth: 3 },
 };
 
+const PROJECT_AUTHORITY = process.env.PROJECT_AUTHORITY as string;
+
 export async function POST(request: NextRequest) {
   try {
     const body: CreateTournamentRequest = await request.json();
@@ -29,6 +31,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: "Host address is required" },
         { status: 400 }
+      );
+    }
+
+    // Restrict tournament creation to admin only
+    if (!PROJECT_AUTHORITY) {
+      return NextResponse.json(
+        { error: "Project authority not configured" },
+        { status: 500 }
+      );
+    }
+
+    if (hostAddress !== PROJECT_AUTHORITY) {
+      return NextResponse.json(
+        { error: "Only admin can create tournaments" },
+        { status: 403 }
       );
     }
 

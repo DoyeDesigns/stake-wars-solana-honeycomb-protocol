@@ -103,7 +103,7 @@ export default function Marketplace() {
         <DialogTrigger className="connect-button-bg size-[84px] px-5 rounded-full items-center justify-center cursor-pointer border-2 border-[#FFFFFF]">
           <img src="/market.svg" alt="market" width={37} height={37} />
         </DialogTrigger>
-        <DialogContent className="bg-[#242424] min-w-[calc(100%-2rem)] my-5 overflow-auto max-h-[450px] sm:max-h-[550px]">
+        <DialogContent className="bg-[#242424] min-w-[calc(100%-2rem)] overflow-auto h-full">
           <DialogTitle className="text-0[18px] text-[#9D9C9E]">
             Acquire extra gear and power ups to better your battle chances
           </DialogTitle>

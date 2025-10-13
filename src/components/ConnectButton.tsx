@@ -18,6 +18,7 @@ type ConnectButtonProps = {
 };
 
 const PROJECT_ADDRESS = process.env.PROJECT_ADDRESS as string;
+const PROFILE_TREE = process.env.PROFILE_TREE as string;
 
 export const compactHash = (hash: string | null | undefined) => {
   if (!hash || typeof hash !== "string" || hash.length < 12) return "";
@@ -90,48 +91,61 @@ useEffect(() => {
 
 const authenticateWithEdgeClient = async () => {
   if (!wallet.publicKey) {
-    alert("Wallet not connected!");
+    toast.error("Wallet not connected!");
     return;
   }
 
-  const {
-    authRequest: { message: authRequest },
-  } = await client.authRequest({
-    wallet: wallet.publicKey.toString(),
-  });
+  try {
+    toast.info('Authenticating...');
+    
+    const {
+      authRequest: { message: authRequest },
+    } = await client.authRequest({
+      wallet: wallet.publicKey.toString(),
+    });
 
-  const encodedMessage = new TextEncoder().encode(authRequest);
+    const encodedMessage = new TextEncoder().encode(authRequest);
 
-  if (!wallet.signMessage) {
-    alert("Your wallet does not support message signing.");
-    return;
-  }
+    if (!wallet.signMessage) {
+      toast.error("Your wallet does not support message signing.");
+      return;
+    }
 
-  const signedUIntArray = await wallet.signMessage(encodedMessage);
-  const signature = base58.encode(signedUIntArray);
+    const signedUIntArray = await wallet.signMessage(encodedMessage);
+    const signature = base58.encode(signedUIntArray);
 
-  const { authConfirm } = await client.authConfirm({
-    wallet: wallet.publicKey.toString(),
-    signature,
-  });
+    const { authConfirm } = await client.authConfirm({
+      wallet: wallet.publicKey.toString(),
+      signature,
+    });
 
-  if (authConfirm.accessToken) {
-    setLocalAccessToken(authConfirm.accessToken);
-    setGlobalAccessToken(authConfirm.accessToken); // Save to global store
-    toast.success("Authentication successful");
+    if (authConfirm.accessToken) {
+      setLocalAccessToken(authConfirm.accessToken);
+      setGlobalAccessToken(authConfirm.accessToken);
+      toast.success("Authenticated! Now create your profile.");
+    } else {
+      toast.error('Authentication failed');
+    }
+  } catch (error) {
+    console.error('Authentication error:', error);
+    toast.error(`Auth failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 };
 
   const createUserAndProfile = async () => {
     if (!wallet.publicKey) return;
-
+    
     try {
       setLoading(true);
+      toast.info('Creating your account...');
+      
+      // Primary approach: Create user with profile in one transaction
       const {
         createNewUserWithProfileTransaction: txResponse,
       } = await client.createNewUserWithProfileTransaction({
         project: PROJECT_ADDRESS,
         wallet: wallet.publicKey.toString(),
+        payer: wallet.publicKey.toString(),
         profileIdentity: "main",
         userInfo: {
           name: "John Doe",
@@ -143,22 +157,62 @@ const authenticateWithEdgeClient = async () => {
       const result = await sendClientTransactions(client, wallet, txResponse);
 
       if (result[0].responses[0].status === 'Success') {
-          toast.success(`User & Profile Created! ${result[0].responses[0].signature}`);
+        toast.success(`User & Profile Created Successfully!`);
+        
+        // Fetch the created user
+        const { user } = await client.findUsers({
+          wallets: [wallet.publicKey.toString()],
+          includeProof: true,
+        });
+
+        if (user.length > 0) {
+          setUser(user[0] as unknown as User);
+          setHasProfile(true);
+        }
       } else {
-        throw new Error("transaction failed")
+        throw new Error("Transaction failed");
       }
-
-      const { user } = await client.findUsers({
-      wallets: [`${wallet.publicKey?.toString()}`],
-      includeProof: true,
-      });
-
-    if (user.length > 0) {
-      setUser(user as unknown as User);                          
-    }
     } catch (e) {
-      if (e instanceof Error) {
-        toast.error("Failed to create user and profile");
+      console.error('❌ Combined creation failed:', e);
+      
+      // FALLBACK: Try creating user only first
+      toast.info('Trying alternate method...');
+      
+      try {
+        const {
+          createNewUserTransaction: txResponse,
+        } = await client.createNewUserTransaction({
+          wallet: wallet.publicKey.toString(),
+          info: {
+            name: "John Doe",
+            pfp: "https://example.com/profile.jpg",
+            bio: "Solana Gamer",
+          },
+          payer: wallet.publicKey.toString(),
+        });
+
+        const result = await sendClientTransactions(client, wallet, txResponse);
+
+        if (result[0].responses[0].status === 'Success') {
+          toast.success('User Created!');
+          toast.info('Next: Click "Authenticate" then "Create Profile"', { autoClose: 7000 });
+          
+          // Fetch the created user
+          const { user } = await client.findUsers({
+            wallets: [wallet.publicKey.toString()],
+            includeProof: true,
+          });
+
+          if (user.length > 0) {
+            setUser(user[0] as unknown as User);
+            setHasProfile(false);
+          }
+        } else {
+          throw new Error("User creation failed");
+        }
+      } catch (fallbackError) {
+        console.error('❌ Fallback failed:', fallbackError);
+        toast.error(`Failed to create user: ${fallbackError instanceof Error ? fallbackError.message : 'Unknown error'}`);
       }
     } finally {
       setLoading(false);
@@ -166,10 +220,15 @@ const authenticateWithEdgeClient = async () => {
   };
 
   const createProfile = async () => {
-    if (!wallet.publicKey || !localAccessToken || !user) return;
+    if (!wallet.publicKey || !localAccessToken || !user) {
+      toast.error('Please authenticate first');
+      return;
+    }
 
     try {
       setLoading(true);
+      toast.info('Creating your profile...');
+      
       const {
         createNewProfileTransaction: txResponse,
       } = await client.createNewProfileTransaction(
@@ -191,16 +250,28 @@ const authenticateWithEdgeClient = async () => {
           },
         }
       );
-
+      
       const result = await sendClientTransactions(client, wallet, txResponse);
+      
       if (result[0].responses[0].status === 'Success') {
-          setHasProfile(true)
-          toast.success(`Profile Created! ${result[0].responses[0].signature}`);
+        setHasProfile(true);
+        toast.success('Profile Created Successfully!');
+        
+        // Refresh user to get profile data
+        const { user: updatedUser } = await client.findUsers({
+          wallets: [wallet.publicKey.toString()],
+          includeProof: true,
+        });
+        
+        if (updatedUser.length > 0) {
+          setUser(updatedUser[0] as unknown as User);
+        }
       } else {
-        throw new Error("transaction failed")
+        throw new Error("Profile transaction failed");
       }
     } catch (e) {
-      toast.error(`Failed to create profile: ${e}`);
+      console.error('Profile creation error:', e);
+      toast.error(`Failed to create profile: ${e instanceof Error ? e.message : 'Unknown error'}`);
     } finally {
       setLoading(false);
     }
