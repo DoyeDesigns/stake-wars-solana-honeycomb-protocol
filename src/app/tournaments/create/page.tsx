@@ -311,10 +311,17 @@ export default function CreateTournamentPage() {
               <Label className="text-white text-lg mb-2 block">
                 Number of Winners *
               </Label>
-              <div className="grid grid-cols-5 gap-2">
-                {[1, 2, 3, 4, 5].map((num) => {
-                  const maxAllowed = formData.maxParticipants === 2 ? 2 : Math.min(5, formData.maxParticipants);
-                  const isDisabled = num > maxAllowed;
+              <div className="grid grid-cols-4 gap-2">
+                {[1, 2, 4].map((num) => {
+                  let isDisabled = false;
+                  let disabledReason = '';
+                  
+                  if (formData.maxParticipants === 2) {
+                    // 2-player: only 1 or 2 winners
+                    isDisabled = num === 4;
+                    if (num === 4) disabledReason = 'Only 2 players in tournament';
+                  }
+                  // All other sizes allow 1, 2, or 4 winners
                   
                   return (
                     <button
@@ -322,6 +329,7 @@ export default function CreateTournamentPage() {
                       type="button"
                       onClick={() => !isDisabled && handleInputChange("numberOfWinners", num)}
                       disabled={isDisabled}
+                      title={isDisabled ? disabledReason : ''}
                       className={`py-3 px-4 rounded-lg font-semibold transition-all ${
                         formData.numberOfWinners === num
                           ? "bg-green-600 text-white border-2 border-green-400"
@@ -330,15 +338,15 @@ export default function CreateTournamentPage() {
                           : "bg-gray-700 text-gray-300 border-2 border-gray-600 hover:bg-gray-600"
                       }`}
                     >
-                      {num}
+                      {num} {num === 4 ? '(with 3rd place match)' : ''}
                     </button>
                   );
                 })}
               </div>
               <p className="text-gray-400 text-xs mt-2">
-                {formData.maxParticipants === 2 
-                  ? "2-player tournaments: Max 2 winners" 
-                  : `${formData.maxParticipants}-player tournament: Max ${Math.min(5, formData.maxParticipants)} winners`}
+                {formData.maxParticipants === 2
+                  ? "2-player: 1 winner (champion) or 2 winners (both get prizes)"
+                  : "1 winner = Champion only | 2 winners = Finals winner + loser | 4 winners = Top 4 with 3rd place match"}
               </p>
             </div>
 
@@ -371,7 +379,7 @@ export default function CreateTournamentPage() {
                 </div>
 
                 {/* 2nd Place - Show if numberOfWinners >= 2 */}
-                {formData.numberOfWinners >= 2 && (
+                {(formData.numberOfWinners === 2 || formData.numberOfWinners === 4) && (
                   <div className="flex items-center gap-4">
                     <Label htmlFor="second" className="text-gray-300 w-24">
                       🥈 2nd Place
@@ -394,8 +402,8 @@ export default function CreateTournamentPage() {
                   </div>
                 )}
 
-                {/* 3rd Place - Show if numberOfWinners >= 3 */}
-                {formData.numberOfWinners >= 3 && (
+                {/* 3rd Place - Show if numberOfWinners === 4 */}
+                {formData.numberOfWinners === 4 && (
                   <div className="flex items-center gap-4">
                     <Label htmlFor="third" className="text-gray-300 w-24">
                       🥉 3rd Place
@@ -418,8 +426,8 @@ export default function CreateTournamentPage() {
                   </div>
                 )}
 
-                {/* 4th Place - Show if numberOfWinners >= 4 */}
-                {formData.numberOfWinners >= 4 && (
+                {/* 4th Place - Show if numberOfWinners === 4 */}
+                {formData.numberOfWinners === 4 && (
                   <div className="flex items-center gap-4">
                     <Label htmlFor="fourth" className="text-gray-300 w-24">
                       🏅 4th Place
@@ -442,8 +450,8 @@ export default function CreateTournamentPage() {
                   </div>
                 )}
 
-                {/* 5th Place - Show if numberOfWinners >= 5 */}
-                {formData.numberOfWinners >= 5 && (
+                {/* 5th Place - Not used (only 1, 2, or 4 winners allowed) */}
+                {false && formData.numberOfWinners >= 5 && (
                   <div className="flex items-center gap-4">
                     <Label htmlFor="fifth" className="text-gray-300 w-24">
                       🏅 5th Place

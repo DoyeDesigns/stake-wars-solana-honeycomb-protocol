@@ -17,6 +17,7 @@ const ROUND_NAMES: Record<BracketRound, string> = {
   'quarterfinals': 'Quarterfinals',
   'semifinals': 'Semifinals',
   'finals': 'Finals',
+  'third_place': '3rd Place Match',
 };
 
 const ROUND_ORDER: BracketRound[] = [
@@ -24,6 +25,7 @@ const ROUND_ORDER: BracketRound[] = [
   'round_of_16',
   'quarterfinals',
   'semifinals',
+  'third_place',
   'finals',
 ];
 
@@ -39,6 +41,7 @@ export default function TournamentBracket({
     'quarterfinals': [],
     'semifinals': [],
     'finals': [],
+    'third_place': [],
   };
 
   bracket.forEach(match => {

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { db } from "@/config/firebase";
-import { Tournament } from "@/types/tournament";
+import { Tournament, TournamentParticipant } from "@/types/tournament";
 import { progressWinner, isTournamentComplete } from "@/lib/tournamentBracket";
 
 interface CompleteMatchRequest {
@@ -78,6 +78,96 @@ export async function POST(request: NextRequest) {
 
     // Check if tournament is complete
     const isComplete = isTournamentComplete(updatedBracket);
+
+    // For ANY tournament with 4 winners: Check if we need to create 3rd place match
+    if (!isComplete && tournament.numberOfWinners === 4) {
+      const { THIRD_PLACE_MATCH_ID } = await import("@/lib/tournamentBracket");
+      const thirdPlaceMatch = updatedBracket.find(m => m.matchId === THIRD_PLACE_MATCH_ID);
+      
+      // Check if both semifinals are complete
+      const semifinals = updatedBracket.filter(m => m.round === 'semifinals');
+      const allSemifinalsComplete = semifinals.length === 2 && semifinals.every(m => m.winner);
+      
+      if (allSemifinalsComplete && thirdPlaceMatch && !thirdPlaceMatch.player1 && !thirdPlaceMatch.player2) {
+        // Get the two semifinal losers
+        const semifinalLosers = semifinals
+          .map(sf => sf.player1?.address === sf.winner ? sf.player2 : sf.player1)
+          .filter((loser): loser is TournamentParticipant => loser !== undefined && loser !== null);
+        
+        if (semifinalLosers.length === 2 && semifinalLosers[0] && semifinalLosers[1]) {
+          console.log('🥉 Both semifinals complete, creating 3rd place match...');
+          
+          const loser1 = semifinalLosers[0];
+          const loser2 = semifinalLosers[1];
+          
+          // Populate 3rd place match
+          thirdPlaceMatch.player1 = loser1;
+          thirdPlaceMatch.player2 = loser2;
+          
+          // Create game room for 3rd place match
+          const gameRoomId = `room_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+          const { CHARACTERS } = await import("@/lib/characters");
+          const player1Character = CHARACTERS.find(c => c.id === loser1.characterId);
+          const player2Character = CHARACTERS.find(c => c.id === loser2.characterId);
+          
+          if (player1Character && player2Character) {
+            const { setDoc, doc } = await import("firebase/firestore");
+            const { db } = await import("@/config/firebase");
+            
+            const gameRoomRef = doc(db, "gameRooms", gameRoomId);
+            await setDoc(gameRoomRef, {
+              id: gameRoomId,
+              createdBy: loser1.address,
+              createdAt: Date.now(),
+              status: "character-select",
+              isTournamentMatch: true,
+              tournamentId,
+              matchId: THIRD_PLACE_MATCH_ID,
+              players: {
+                [loser1.address]: {
+                  wallet: loser1.address,
+                  role: "creator",
+                  characterId: loser1.characterId,
+                  diceRoll: null,
+                },
+                [loser2.address]: {
+                  wallet: loser2.address,
+                  role: "challenger",
+                  characterId: loser2.characterId,
+                  diceRoll: null,
+                },
+              },
+              gameState: {
+                gameStatus: "character-select",
+                currentTurn: null,
+                turnCount: 0,
+                player1: {
+                  id: loser1.address,
+                  character: player1Character,
+                  currentHealth: player1Character.baseHealth,
+                  maxHealth: player1Character.baseHealth,
+                  defenseInventory: {},
+                  buffs: [],
+                },
+                player2: {
+                  id: loser2.address,
+                  character: player2Character,
+                  currentHealth: player2Character.baseHealth,
+                  maxHealth: player2Character.baseHealth,
+                  defenseInventory: {},
+                  buffs: [],
+                },
+                diceRolls: {},
+                gameHistory: [],
+              },
+            });
+            
+            thirdPlaceMatch.roomId = gameRoomId;
+            console.log(`✅ Created 3rd place match game room: ${gameRoomId}`);
+          }
+        }
+      }
+    }
 
     // Create game room for next match if winner progressed
     if (!isComplete) {
@@ -170,7 +260,7 @@ export async function POST(request: NextRequest) {
       try {
         const { getTopWinners } = await import("@/lib/tournamentBracket");
         
-        const topWinners = getTopWinners(updatedBracket, tournament.numberOfWinners);
+        const topWinners = getTopWinners(updatedBracket, tournament.numberOfWinners, tournament.maxParticipants);
         
         if (topWinners.length > 0) {
           const distributions: Array<{

@@ -4,12 +4,12 @@ import { db } from "@/config/firebase";
 import { CreateTournamentRequest, PrizeSplit } from "@/types/tournament";
 
 // Default prize splits based on number of winners
+// Only 1, 2, or 4 winners allowed
+// 4 winners includes a 3rd place match between semifinal losers
 const DEFAULT_PRIZE_SPLITS: Record<number, PrizeSplit> = {
   1: { first: 100 }, // Winner takes all
-  2: { first: 70, second: 30 },
-  3: { first: 60, second: 30, third: 10 },
-  4: { first: 50, second: 30, third: 15, fourth: 5 },
-  5: { first: 50, second: 25, third: 15, fourth: 7, fifth: 3 },
+  2: { first: 70, second: 30 }, // Finals winner + loser
+  4: { first: 50, second: 30, third: 15, fourth: 5 }, // Top 4 with 3rd place match
 };
 
 const PROJECT_AUTHORITY = process.env.PROJECT_AUTHORITY as string;
@@ -63,28 +63,37 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Determine max winners based on tournament size
-    const maxWinnersAllowed = maxParticipants === 2 ? 2 : Math.min(5, maxParticipants);
-    const finalNumberOfWinners = numberOfWinners && numberOfWinners <= maxWinnersAllowed 
-      ? numberOfWinners 
-      : (maxParticipants === 2 ? 2 : 3); // Default: 2 for 2-player, 3 for others
-
-    // Validate number of winners
-    if (finalNumberOfWinners < 1 || finalNumberOfWinners > maxWinnersAllowed) {
+    // Determine max winners and validate
+    // Only allow 1, 2, or 4 winners for all tournaments
+    // 2-player tournaments can't have 4 winners (only 2 players exist)
+    
+    const validWinnerCounts = maxParticipants === 2 ? [1, 2] : [1, 2, 4];
+    
+    if (numberOfWinners && !validWinnerCounts.includes(numberOfWinners)) {
       return NextResponse.json(
-        { error: `Number of winners must be between 1 and ${maxWinnersAllowed}` },
+        { error: `Invalid number of winners. Must be ${maxParticipants === 2 ? '1 or 2' : '1, 2, or 4'}. Select 4 for a 3rd place match between semifinal losers.` },
         { status: 400 }
       );
     }
+    
+    const finalNumberOfWinners = numberOfWinners && validWinnerCounts.includes(numberOfWinners)
+      ? numberOfWinners
+      : 2; // Default: 2 winners (finals winner + loser)
 
     // Validate prize split
     const finalPrizeSplit = prizeSplit || DEFAULT_PRIZE_SPLITS[finalNumberOfWinners];
-    const totalPercentage = 
-      (finalPrizeSplit.first || 0) + 
-      (finalPrizeSplit.second || 0) + 
-      (finalPrizeSplit.third || 0) +
-      (finalPrizeSplit.fourth || 0) +
-      (finalPrizeSplit.fifth || 0);
+    
+    // Calculate total percentage based on number of winners
+    let totalPercentage = finalPrizeSplit.first || 0;
+    
+    if (finalNumberOfWinners >= 2) {
+      totalPercentage += finalPrizeSplit.second || 0;
+    }
+    
+    if (finalNumberOfWinners === 4) {
+      totalPercentage += finalPrizeSplit.third || 0;
+      totalPercentage += finalPrizeSplit.fourth || 0;
+    }
     
     if (totalPercentage !== 100) {
       return NextResponse.json(

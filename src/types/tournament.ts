@@ -1,6 +1,6 @@
 export type TournamentStatus = 'open' | 'in_progress' | 'completed' | 'cancelled';
 export type TournamentSize = 2 | 4 | 8 | 16 | 32;
-export type BracketRound = 'round_of_32' | 'round_of_16' | 'quarterfinals' | 'semifinals' | 'finals';
+export type BracketRound = 'round_of_32' | 'round_of_16' | 'quarterfinals' | 'semifinals' | 'finals' | 'third_place';
 
 export interface TournamentParticipant {
   address: string;

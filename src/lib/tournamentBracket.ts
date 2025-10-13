@@ -15,7 +15,7 @@ function shuffleArray<T>(array: T[]): T[] {
 /**
  * Get the round name based on match count
  * For 2-player tournaments: 1 match = finals
- * For 4-player tournaments: 2 matches = semifinals, 1 match = finals
+ * For 4-player tournaments: 2 matches = semifinals, 1 match = finals, 1 match = third_place
  */
 function getRoundName(matchCount: number): BracketRound {
   if (matchCount === 1) return 'finals';
@@ -24,6 +24,11 @@ function getRoundName(matchCount: number): BracketRound {
   if (matchCount === 8) return 'round_of_16';
   return 'round_of_32';
 }
+
+/**
+ * Special round identifier for 3rd place match
+ */
+export const THIRD_PLACE_MATCH_ID = 'third_place_match';
 
 /**
  * Generate tournament bracket for single elimination
@@ -78,6 +83,15 @@ export function generateBracket(
     currentRoundMatches = currentRoundMatches / 2;
     roundNumber++;
   }
+
+  // Add a 3rd place match placeholder for all tournaments
+  // This will be populated with semifinal losers if numberOfWinners = 4
+  // Always add it to the bracket, but only use it when needed
+  bracket.push({
+    matchId: THIRD_PLACE_MATCH_ID,
+    round: 'third_place' as BracketRound,
+    position: 0, // Special position for 3rd place match
+  });
 
   return bracket;
 }
@@ -134,8 +148,8 @@ export function progressWinner(
     completedAt: Date.now(),
   };
 
-  // If this is the finals, we're done
-  if (completedMatch.round === 'finals') {
+  // If this is the finals or 3rd place match, we're done (no progression)
+  if (completedMatch.round === 'finals' || completedMatch.round === 'third_place') {
     return updatedBracket;
   }
 
@@ -179,6 +193,8 @@ function getNextRound(currentRound: BracketRound): BracketRound {
     case 'quarterfinals': return 'semifinals';
     case 'semifinals': return 'finals';
     case 'finals': return 'finals'; // No next round
+    case 'third_place': return 'third_place'; // 3rd place match doesn't progress
+    default: return 'finals';
   }
 }
 
@@ -187,7 +203,17 @@ function getNextRound(currentRound: BracketRound): BracketRound {
  */
 export function isTournamentComplete(bracket: BracketMatch[]): boolean {
   const finalsMatch = bracket.find(m => m.round === 'finals');
-  return finalsMatch ? !!finalsMatch.winner : false;
+  if (!finalsMatch || !finalsMatch.winner) return false;
+  
+  // Check if there's a 3rd place match that needs to be completed
+  const thirdPlaceMatch = bracket.find(m => m.matchId === THIRD_PLACE_MATCH_ID);
+  if (thirdPlaceMatch && thirdPlaceMatch.player1 && thirdPlaceMatch.player2) {
+    // 3rd place match exists and has players, must be completed
+    return !!thirdPlaceMatch.winner;
+  }
+  
+  // No 3rd place match or it's not populated yet, just check finals
+  return true;
 }
 
 /**
@@ -233,8 +259,9 @@ export function getThirdPlaceCandidates(bracket: BracketMatch[]): TournamentPart
 
 /**
  * Get top N winners from tournament bracket
+ * When 4 winners selected: Uses 3rd place match results (for any tournament size)
  */
-export function getTopWinners(bracket: BracketMatch[], numberOfWinners: number): TournamentParticipant[] {
+export function getTopWinners(bracket: BracketMatch[], numberOfWinners: number, tournamentSize?: number): TournamentParticipant[] {
   const winners: TournamentParticipant[] = [];
   
   // 1st place - finals winner
@@ -245,27 +272,24 @@ export function getTopWinners(bracket: BracketMatch[], numberOfWinners: number):
   const second = getSecondPlace(bracket);
   if (second && numberOfWinners >= 2) winners.push(second);
   
-  // 3rd+ places - need to traverse bracket backwards
-  if (numberOfWinners >= 3) {
-    const thirds = getThirdPlaceCandidates(bracket);
-    winners.push(...thirds.slice(0, Math.min(thirds.length, numberOfWinners - 2)));
-  }
-  
-  // For 4th and 5th places (quarterfinal losers), need additional logic
-  if (numberOfWinners >= 4) {
-    const quarterfinals = bracket.filter(m => m.round === 'quarterfinals' && m.winner);
-    const quarterLosers: TournamentParticipant[] = [];
+  // For ANY tournament with 4 winners: Use 3rd place match results
+  if (numberOfWinners === 4) {
+    const thirdPlaceMatch = bracket.find(m => m.matchId === THIRD_PLACE_MATCH_ID);
     
-    quarterfinals.forEach(match => {
-      const loser = match.player1?.address === match.winner 
-        ? match.player2 
-        : match.player1;
-      if (loser && !winners.find(w => w.address === loser.address)) {
-        quarterLosers.push(loser);
-      }
-    });
-    
-    winners.push(...quarterLosers.slice(0, numberOfWinners - winners.length));
+    if (thirdPlaceMatch && thirdPlaceMatch.winner) {
+      // 3rd place: Winner of 3rd place match
+      const thirdPlace = thirdPlaceMatch.player1?.address === thirdPlaceMatch.winner
+        ? thirdPlaceMatch.player1
+        : thirdPlaceMatch.player2;
+      
+      // 4th place: Loser of 3rd place match
+      const fourthPlace = thirdPlaceMatch.player1?.address === thirdPlaceMatch.winner
+        ? thirdPlaceMatch.player2
+        : thirdPlaceMatch.player1;
+      
+      if (thirdPlace) winners.push(thirdPlace);
+      if (fourthPlace) winners.push(fourthPlace);
+    }
   }
   
   return winners.slice(0, numberOfWinners);
