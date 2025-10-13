@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
 
     // Get top winners based on tournament configuration
     const { getTopWinners } = await import("@/lib/tournamentBracket");
-    const topWinners = getTopWinners(tournament.bracket, tournament.numberOfWinners, tournament.maxParticipants);
+    const topWinners = getTopWinners(tournament.bracket, tournament.numberOfWinners);
 
     if (topWinners.length === 0) {
       return NextResponse.json(

@@ -260,7 +260,7 @@ export async function POST(request: NextRequest) {
       try {
         const { getTopWinners } = await import("@/lib/tournamentBracket");
         
-        const topWinners = getTopWinners(updatedBracket, tournament.numberOfWinners, tournament.maxParticipants);
+        const topWinners = getTopWinners(updatedBracket, tournament.numberOfWinners);
         
         if (topWinners.length > 0) {
           const distributions: Array<{

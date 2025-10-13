@@ -578,10 +578,15 @@ export default function TournamentDetailsPage({ params }: PageProps) {
                 </p>
               ) : (
                 <div className="space-y-3">
-                  {tournament.participants.map((participant, index) => (
+                  {tournament.participants.map((participant, index) => {
+                    const isCurrentUser = participant.address === publicKey?.toString();
+                    
+                    return (
                     <div
                       key={participant.address}
-                      className="bg-gray-900/50 rounded-lg p-4 flex items-center gap-4"
+                      className={`bg-gray-900/50 rounded-lg p-4 flex items-center gap-4 ${
+                        isCurrentUser ? 'ring-2 ring-green-500 bg-green-900/20' : ''
+                      }`}
                     >
                       <div className="text-purple-400 font-bold text-lg">
                         #{index + 1}
@@ -589,13 +594,19 @@ export default function TournamentDetailsPage({ params }: PageProps) {
                       <div className="flex-1">
                         <p className="text-white font-semibold">
                           {participant.nickname}
+                          {isCurrentUser && (
+                            <span className="ml-2 px-2 py-1 bg-green-600 text-white text-xs rounded-full">
+                              YOU
+                            </span>
+                          )}
                         </p>
                         <p className="text-gray-400 text-sm">
                           {participant.village} • {participant.address.slice(0, 8)}...
                         </p>
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
