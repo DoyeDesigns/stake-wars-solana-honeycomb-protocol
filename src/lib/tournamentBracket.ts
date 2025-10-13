@@ -261,7 +261,7 @@ export function getThirdPlaceCandidates(bracket: BracketMatch[]): TournamentPart
  * Get top N winners from tournament bracket
  * When 4 winners selected: Uses 3rd place match results (for any tournament size)
  */
-export function getTopWinners(bracket: BracketMatch[], numberOfWinners: number, tournamentSize?: number): TournamentParticipant[] {
+export function getTopWinners(bracket: BracketMatch[], numberOfWinners: number): TournamentParticipant[] {
   const winners: TournamentParticipant[] = [];
   
   // 1st place - finals winner
