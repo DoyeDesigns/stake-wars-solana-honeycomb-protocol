@@ -272,49 +272,87 @@ export default function MintCharacter() {
         </div>
       ) : (
         <div className="flex flex-col justify-center items-center mt-[65px]">
-          {/* Existing Characters Section */}
-          {wallet.connected && characterAbilities.length > 0 && (
-            <div className="mb-8 w-full max-w-4xl">
-              <h2 className="text-xl font-bold text-white mb-4 text-center">Your Existing Characters</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {characterAbilities.map((character, index) => (
-                  <div key={index} className="bg-[#313030] p-4 rounded-xl border border-[#E3DEDE]">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="w-16 h-16 bg-[#1a1a1a] border-2 border-black rounded-md flex items-center justify-center overflow-hidden">
-                        <img
-                          src={`/characters/${character.id}.png`}
-                          alt={character.nickname}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                      <div>
-                        <h3 className="font-bold text-white text-sm">{character.nickname}</h3>
-                        <p className="text-xs text-gray-300">{character.village}</p>
-                        <p className="text-xs text-gray-300">{character.specialty}</p>
-                      </div>
+          {/* Existing Characters Section - Show if user already has a character */}
+          {wallet.connected && characterAbilities.length > 0 ? (
+            <div className="mb-8 w-full max-w-4xl px-4">
+              {/* Warning Message */}
+              <div className="bg-yellow-900/30 border-2 border-yellow-500/50 rounded-xl p-6 mb-6 text-center">
+                <h2 className="text-2xl font-bold text-yellow-400 mb-3">
+                  ⚠️ Character Already Minted
+                </h2>
+                <p className="text-gray-300 text-lg mb-2">
+                  You already have a character! Minting is only available for new players.
+                </p>
+                <p className="text-gray-400 text-sm">
+                  Each player can only mint one character to maintain game balance.
+                </p>
+              </div>
+
+              {/* Display Existing Character */}
+              <h2 className="text-2xl font-bold text-white mb-4 text-center">Your Character</h2>
+              <div className="flex justify-center">
+                <div className="bg-[#313030] p-6 rounded-xl border-2 border-purple-500/50 max-w-md w-full">
+                  <div className="flex items-center gap-4 mb-4">
+                    <div className="w-24 h-24 bg-[#1a1a1a] border-4 border-black rounded-md flex items-center justify-center overflow-hidden">
+                      <img
+                        src={`/characters/${characterAbilities[0].id}.png`}
+                        alt={characterAbilities[0].nickname}
+                        className="w-full h-full object-cover"
+                      />
                     </div>
-                    <div className="text-xs text-gray-300">
-                      <p><span className="font-bold">Health:</span> {character.baseHealth}</p>
-                      <p><span className="font-bold">Abilities:</span> {character.abilities.length}</p>
+                    <div>
+                      <h3 className="font-bold text-white text-xl">{characterAbilities[0].nickname}</h3>
+                      <p className="text-sm text-purple-400">{characterAbilities[0].village}</p>
+                      <p className="text-sm text-gray-300">{characterAbilities[0].specialty}</p>
                     </div>
                   </div>
-                ))}
+                  <div className="grid grid-cols-2 gap-3 text-sm text-gray-300 bg-gray-900/50 p-4 rounded-lg">
+                    <p><span className="font-bold text-white">Health:</span> {characterAbilities[0].baseHealth}</p>
+                    <p><span className="font-bold text-white">Abilities:</span> {characterAbilities[0].abilities.length}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex justify-center gap-4 mt-8">
+                <Button 
+                  onClick={() => router.push('/lobby')} 
+                  className="connect-button-bg cursor-pointer w-[200px] h-12 text-lg"
+                >
+                  Go to Lobby
+                </Button>
               </div>
             </div>
-          )}
+          ) : (
+            <>
+              {/* New Players - Show Mint Interface */}
+              <div className="mb-4">
+                <div className="bg-green-900/30 border-2 border-green-500/50 rounded-xl p-4 text-center max-w-md">
+                  <p className="text-green-400 font-semibold text-sm">
+                    ✨ Welcome! You can mint your first character below.
+                  </p>
+                </div>
+              </div>
 
-          <div className="bg-[#313030] px-8 flex items-center justify-between rounded-xl border-[#E3DEDE] border-[0.75px] w-[540px] h-[250px]">
-            <ImageSlider />
-            <CircleCarousel />
-          </div>
-          <Button
-              className="connect-button-bg cursor-pointer w-[175px] h-10.5 mt-20"
-              disabled={isMinting}
-              onClick={() => mintCharacter()}
-            >
-              Mint Character
-            </Button>
-          <Button onClick={() => router.push('/lobby')} className="connect-button-bg cursor-pointer w-[175px] h-10.5 mt-3 mb-10">lobby</Button>
+              <div className="bg-[#313030] px-8 flex items-center justify-between rounded-xl border-[#E3DEDE] border-[0.75px] w-[540px] h-[250px]">
+                <ImageSlider />
+                <CircleCarousel />
+              </div>
+              <Button
+                className="connect-button-bg cursor-pointer w-[175px] h-10.5 mt-20"
+                disabled={isMinting}
+                onClick={() => mintCharacter()}
+              >
+                {isMinting ? "Minting..." : "Mint Character"}
+              </Button>
+              <Button 
+                onClick={() => router.push('/lobby')} 
+                className="connect-button-bg cursor-pointer w-[175px] h-10.5 mt-3 mb-10"
+              >
+                Lobby
+              </Button>
+            </>
+          )}
         </div>
       )}
     </div>

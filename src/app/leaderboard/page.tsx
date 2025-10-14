@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "react-toastify";
+import { RefreshCw } from "lucide-react";
 
 interface LeaderboardProfile {
   address: string;
@@ -26,6 +27,7 @@ export default function LeaderboardPage() {
   const { publicKey } = useWallet();
   const [rawLeaderboard, setRawLeaderboard] = useState<LeaderboardProfile[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [sortBy, setSortBy] = useState<'wins' | 'winRate' | 'xp' | 'level'>('wins');
 
   useEffect(() => {
@@ -93,9 +95,14 @@ export default function LeaderboardPage() {
     return null;
   }, [publicKey, leaderboard]);
 
-  const fetchLeaderboard = async () => {
+  const fetchLeaderboard = async (isRefresh = false) => {
     try {
-      setLoading(true);
+      if (isRefresh) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
+      
       console.log("🏆 Fetching leaderboard data (will sort client-side)");
       
       // Fetch without sortBy - we'll sort with useMemo
@@ -107,6 +114,10 @@ export default function LeaderboardPage() {
       if (data.success) {
         setRawLeaderboard(data.leaderboard);
         console.log(`✅ Loaded ${data.count} profiles for leaderboard (${data.totalProfiles} total)`);
+        
+        if (isRefresh) {
+          toast.success("Leaderboard refreshed!");
+        }
         
         // Log all profiles for inspection
         console.log("\n=== ALL LEADERBOARD PROFILES ===");
@@ -129,6 +140,7 @@ export default function LeaderboardPage() {
       toast.error("Failed to load leaderboard");
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -175,6 +187,16 @@ export default function LeaderboardPage() {
                 Top players ranked by performance
               </p>
             </div>
+            
+            {/* Refresh Button */}
+            <button
+              onClick={() => fetchLeaderboard(true)}
+              disabled={refreshing}
+              className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+            >
+              <RefreshCw className={`w-5 h-5 ${refreshing ? 'animate-spin' : ''}`} />
+              {refreshing ? 'Refreshing...' : 'Refresh'}
+            </button>
           </div>
 
           {/* Sort Tabs */}
@@ -264,73 +286,78 @@ export default function LeaderboardPage() {
           </div>
         ) : (
           <div className="bg-gray-800/50 backdrop-blur-sm border-2 border-purple-500/30 rounded-xl overflow-hidden">
-            {/* Table Header */}
-            <div className="bg-gray-900/50 px-6 py-4 grid grid-cols-7 gap-4 text-gray-400 text-sm font-semibold border-b border-gray-700">
-              <div>Rank</div>
-              <div className="col-span-2">Player</div>
-              <div className="text-center">Wins</div>
-              <div className="text-center">Win Rate</div>
-              <div className="text-center">Level</div>
-              <div className="text-center">XP</div>
-            </div>
+            {/* Horizontal Scroll Container for Mobile */}
+            <div className="overflow-x-auto">
+              <div className="min-w-[768px]">
+                {/* Table Header */}
+                <div className="bg-gray-900/50 px-6 py-4 grid grid-cols-7 gap-4 text-gray-400 text-sm font-semibold border-b border-gray-700">
+                  <div>Rank</div>
+                  <div className="col-span-2">Player</div>
+                  <div className="text-center">Wins</div>
+                  <div className="text-center">Win Rate</div>
+                  <div className="text-center">Level</div>
+                  <div className="text-center">XP</div>
+                </div>
 
-            {/* Table Rows */}
-            <div className="divide-y divide-gray-700">
-              {leaderboard.map((profile) => {
-                const isCurrentUser = publicKey?.toString() === profile.walletAddress;
-                
-                return (
-                  <div
-                    key={profile.address}
-                    className={`px-6 py-4 grid grid-cols-7 gap-4 items-center transition-colors ${
-                      isCurrentUser
-                        ? 'bg-purple-500/20 border-l-4 border-purple-500'
-                        : 'hover:bg-gray-700/30'
-                    }`}
-                  >
-                    {/* Rank */}
-                    <div className={`text-2xl font-bold ${getRankColor(profile.rank)}`}>
-                      {getRankIcon(profile.rank)}
-                    </div>
+                {/* Table Rows */}
+                <div className="divide-y divide-gray-700">
+                  {leaderboard.map((profile) => {
+                    const isCurrentUser = publicKey?.toString() === profile.walletAddress;
+                    
+                    return (
+                      <div
+                        key={profile.address}
+                        className={`px-6 py-4 grid grid-cols-7 gap-4 items-center transition-colors ${
+                          isCurrentUser
+                            ? 'bg-purple-500/20 border-l-4 border-purple-500'
+                            : 'hover:bg-gray-700/30'
+                        }`}
+                      >
+                        {/* Rank */}
+                        <div className={`text-2xl font-bold ${getRankColor(profile.rank)}`}>
+                          {getRankIcon(profile.rank)}
+                        </div>
 
-                    {/* Player Wallet Address */}
-                    <div className="col-span-2">
-                      <p className="text-white font-semibold truncate">
-                        {profile.walletAddress.slice(0, 8)}...{profile.walletAddress.slice(-6)}
-                        {isCurrentUser && (
-                          <span className="ml-2 text-xs bg-purple-600 px-2 py-1 rounded">
-                            You
-                          </span>
-                        )}
-                      </p>
-                    </div>
+                        {/* Player Wallet Address */}
+                        <div className="col-span-2">
+                          <p className="text-white font-semibold truncate">
+                            {profile.walletAddress.slice(0, 8)}...{profile.walletAddress.slice(-6)}
+                            {isCurrentUser && (
+                              <span className="ml-2 text-xs bg-purple-600 px-2 py-1 rounded">
+                                You
+                              </span>
+                            )}
+                          </p>
+                        </div>
 
-                    {/* Wins */}
-                    <div className="text-center">
-                      <p className="text-green-400 font-bold">{profile.wins}</p>
-                      <p className="text-gray-500 text-xs">{profile.losses}L</p>
-                    </div>
+                        {/* Wins */}
+                        <div className="text-center">
+                          <p className="text-green-400 font-bold">{profile.wins}</p>
+                          <p className="text-gray-500 text-xs">{profile.losses}L</p>
+                        </div>
 
-                    {/* Win Rate */}
-                    <div className="text-center">
-                      <p className="text-blue-400 font-bold">{profile.winRate}%</p>
-                      <p className="text-gray-500 text-xs">{profile.totalGames} games</p>
-                    </div>
+                        {/* Win Rate */}
+                        <div className="text-center">
+                          <p className="text-blue-400 font-bold">{profile.winRate}%</p>
+                          <p className="text-gray-500 text-xs">{profile.totalGames} games</p>
+                        </div>
 
-                    {/* Level */}
-                    <div className="text-center">
-                      <p className="text-purple-400 font-bold">
-                        {profile.level} ({profile.rankName})
-                      </p>
-                    </div>
+                        {/* Level */}
+                        <div className="text-center">
+                          <p className="text-purple-400 font-bold">
+                            {profile.level} ({profile.rankName})
+                          </p>
+                        </div>
 
-                    {/* XP */}
-                    <div className="text-center">
-                      <p className="text-yellow-400 font-bold">{profile.xp}</p>
-                    </div>
-                  </div>
-                );
-              })}
+                        {/* XP */}
+                        <div className="text-center">
+                          <p className="text-yellow-400 font-bold">{profile.xp}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           </div>
         )}

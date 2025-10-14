@@ -1,17 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
 import { client } from "@/utils/constants/client";
-import { sendTransaction } from "@honeycomb-protocol/edge-client/client/helpers.js";
-import { Keypair } from "@solana/web3.js";
 import { Character } from "@/lib/characters";
+import { Keypair } from "@solana/web3.js";
+import { sendTransaction } from "@honeycomb-protocol/edge-client/client/helpers";
 
 const ASSEMBLER_CONFIG_ADDRESS = process.env.ASSEMBLER_CONFIG_ADDRESS as string;
 const PROJECT_ADDRESS = process.env.PROJECT_ADDRESS as string;
 const PROJECT_AUTHORITY = process.env.PROJECT_AUTHORITY as string;
+const CHAKRA_RESOURCE_ADDRESS = process.env.CHAKRA_RESOURCE_ADDRESS as string;
 
-const ADMIN_PRIVATE_KEY = process.env.ADMIN_PRIVATE_KEY as string;
 const adminKeypair = Keypair.fromSecretKey(
-  new Uint8Array(JSON.parse(ADMIN_PRIVATE_KEY))
+  new Uint8Array(JSON.parse(process.env.ADMIN_PRIVATE_KEY as string))
 );
+
+// Character pricing breakdown
+const CHARACTER_PRICE = 50;
+const BURN_PERCENTAGE = 0.60; // 60%
+const TREASURY_PERCENTAGE = 0.40; // 40%
+
+const BURN_AMOUNT = Math.floor(CHARACTER_PRICE * BURN_PERCENTAGE); // 30 CHK
+const TREASURY_AMOUNT = Math.floor(CHARACTER_PRICE * TREASURY_PERCENTAGE); // 20 CHK
 
 const traitUri =
   "https://lh3.googleusercontent.com/-Jsm7S8BHy4nOzrw2f5AryUgp9Fym2buUOkkxgNplGCddTkiKBXPLRytTMXBXwGcHuRr06EvJStmkHj-9JeTfmHsnT0prHg5Mhg";
@@ -54,9 +62,14 @@ function generateOrderedCharacterTraits() {
   return [villageTrait, chakraTrait];
 }
 
+/**
+ * Step 2: Burn resources and mint character
+ * Admin signs both transactions (burn + mint)
+ * Called AFTER user has signed transfer transactions
+ */
 export async function POST(request: NextRequest) {
   try {
-    const { walletPublicKey, characterAddresses } = await request.json();
+    const { walletPublicKey, characterAddresses, characterId } = await request.json();
 
     if (!walletPublicKey) {
       return NextResponse.json(
@@ -73,9 +86,27 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate character traits
-    const generated = generateOrderedCharacterTraits().map(
-      (trait) => [trait.label, trait.name] as [string, string]
-    );
+    let generated: [string, string][];
+    
+    if (characterId) {
+      // If characterId is provided, parse it to get village and chakra
+      // Format: "hidden_leaf-fire" -> ["Hidden Leaf", "Fire"]
+      const parts = characterId.split('-');
+      const village = parts[0].split('_').map((word: string) => 
+        word.charAt(0).toUpperCase() + word.slice(1)
+      ).join(' ');
+      const chakra = parts[1].charAt(0).toUpperCase() + parts[1].slice(1);
+      
+      generated = [
+        ["Village", village],
+        ["Chakra", chakra]
+      ];
+    } else {
+      // Random generation if no characterId provided
+      generated = generateOrderedCharacterTraits().map(
+        (trait) => [trait.label, trait.name] as [string, string]
+      );
+    }
 
     const attributesObject: Record<string, string> = Object.fromEntries(generated);
     const id = getCharacterId(attributesObject);
@@ -92,7 +123,34 @@ export async function POST(request: NextRequest) {
 
     const characterModelAddress = matchedCharacter.address;
 
-    const { createAssembleCharacterTransaction: txResponse } =
+    if (!CHAKRA_RESOURCE_ADDRESS) {
+      return NextResponse.json(
+        { error: "CHAKRA_RESOURCE_ADDRESS not configured" },
+        { status: 500 }
+      );
+    }
+
+    // Step 2: Admin signs burn + mint (treasury transfer already done by user)
+    console.log(`Admin signing: Burn (${BURN_AMOUNT} CHK) + Mint Character (User already transferred ${TREASURY_AMOUNT} CHK to treasury)`);
+
+    // 1. Burn 30 CHK (60%) - ADMIN SIGNS
+    const { createBurnResourceTransaction: burnTxResponse } = await client.createBurnResourceTransaction({
+      authority: PROJECT_AUTHORITY,
+      resource: CHAKRA_RESOURCE_ADDRESS,
+      amount: BURN_AMOUNT.toString(),
+      payer: adminKeypair.publicKey.toString(),
+      owner: walletPublicKey
+    });
+
+    console.log("Sending burn transaction (admin signed)...");
+    const burnResponse = await sendTransaction(client, burnTxResponse, [adminKeypair]);
+    
+    if (burnResponse.status !== "Success") {
+      throw new Error(`Burn transaction failed: ${burnResponse.error || 'Unknown error'}`);
+    }
+
+    // 2. Mint Character - ADMIN SIGNS
+    const { createAssembleCharacterTransaction: mintTxResponse } =
       await client.createAssembleCharacterTransaction({
         project: PROJECT_ADDRESS,
         assemblerConfig: ASSEMBLER_CONFIG_ADDRESS,
@@ -103,21 +161,27 @@ export async function POST(request: NextRequest) {
         attributes: generated,
       });
 
-    const response = await sendTransaction(
-        client,
-        txResponse,
-        [adminKeypair]
-    );
+    console.log("Sending mint transaction (admin signed)...");
+    const mintResponse = await sendTransaction(client, mintTxResponse, [adminKeypair]);
 
-    console.log(response)
+    if (mintResponse.status !== "Success") {
+      throw new Error(`Mint transaction failed: ${mintResponse.error || 'Unknown error'}`);
+    }
+
+    console.log("Burn + Mint completed successfully!");
 
     return NextResponse.json({
       success: true,
-      transactionResult: response,
+      transactionResult: mintResponse,
       characterId: id,
       characterModelAddress,
       treeAddress: matchedCharacter.treeAdress,
       attributes: generated,
+      payment: {
+        total: CHARACTER_PRICE,
+        burnt: BURN_AMOUNT,
+        treasury: TREASURY_AMOUNT,
+      }
     });
 
   } catch (error) {
