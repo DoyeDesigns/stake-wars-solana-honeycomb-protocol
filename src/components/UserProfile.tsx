@@ -12,12 +12,11 @@ import { useUserStore } from "@/store/useUser";
 
 interface UserProfileProps {
   showLabel?: boolean;
-  onOpen?: () => void;
   isOpen?: boolean;
   setIsOpen?: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-export default function UserProfile({ showLabel = false, onOpen, isOpen: externalIsOpen, setIsOpen: externalSetIsOpen }: UserProfileProps) {
+export default function UserProfile({ showLabel = false, isOpen: externalIsOpen, setIsOpen: externalSetIsOpen }: UserProfileProps) {
   const { connection } = useConnection();
   const wallet = useWallet();
   const [balance, setBalance] = useState<number | null>(null);
