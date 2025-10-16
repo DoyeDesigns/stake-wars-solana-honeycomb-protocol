@@ -5,8 +5,7 @@ import { useState } from "react";
 import { Button } from "./ui/button";
 import { 
   Sword, 
-  Shield, 
-  Heart, 
+  Shield,
   Coins, 
   Trophy, 
   Users, 
