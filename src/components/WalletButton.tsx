@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
+import { WalletName } from '@solana/wallet-adapter-base';
 import { Button } from './ui/button';
 import { Copy, Check, ChevronDown, Wallet, LogOut, RefreshCw } from 'lucide-react';
 import { toast } from 'react-toastify';
@@ -53,9 +54,9 @@ export default function WalletButton({ className = '' }: WalletButtonProps) {
   };
 
   // Handle wallet selection
-  const handleSelectWallet = async (walletName: string) => {
+  const handleSelectWallet = async (walletName: WalletName) => {
     try {
-      wallet.select(walletName as any);
+      wallet.select(walletName);
       await wallet.connect();
       setShowWalletSelector(false);
       setIsOpen(false);
