@@ -63,13 +63,14 @@ function generateOrderedCharacterTraits() {
 }
 
 /**
- * Step 2: Burn resources and mint character
- * Admin signs both transactions (burn + mint)
- * Called AFTER user has signed transfer transactions
+ * Mint character endpoint
+ * Supports two modes:
+ * 1. FREE MINT: No characterId = random character (for new users from /mint-character page)
+ * 2. PAID MINT: With characterId = specific character (from marketplace purchase)
  */
 export async function POST(request: NextRequest) {
   try {
-    const { walletPublicKey, characterAddresses, characterId } = await request.json();
+    const { walletPublicKey, characterAddresses, characterId, isPurchase } = await request.json();
 
     if (!walletPublicKey) {
       return NextResponse.json(
@@ -123,66 +124,103 @@ export async function POST(request: NextRequest) {
 
     const characterModelAddress = matchedCharacter.address;
 
-    if (!CHAKRA_RESOURCE_ADDRESS) {
-      return NextResponse.json(
-        { error: "CHAKRA_RESOURCE_ADDRESS not configured" },
-        { status: 500 }
-      );
-    }
+    // PAID MINT: If this is a purchase from marketplace
+    if (isPurchase === true) {
+      if (!CHAKRA_RESOURCE_ADDRESS) {
+        return NextResponse.json(
+          { error: "CHAKRA_RESOURCE_ADDRESS not configured" },
+          { status: 500 }
+        );
+      }
 
-    // Step 2: Admin signs burn + mint (treasury transfer already done by user)
-    console.log(`Admin signing: Burn (${BURN_AMOUNT} CHK) + Mint Character (User already transferred ${TREASURY_AMOUNT} CHK to treasury)`);
+      console.log(`PAID MINT: Burn (${BURN_AMOUNT} CHK) + Mint Character (User already transferred ${TREASURY_AMOUNT} CHK to treasury)`);
 
-    // 1. Burn 30 CHK (60%) - ADMIN SIGNS
-    const { createBurnResourceTransaction: burnTxResponse } = await client.createBurnResourceTransaction({
-      authority: PROJECT_AUTHORITY,
-      resource: CHAKRA_RESOURCE_ADDRESS,
-      amount: BURN_AMOUNT.toString(),
-      payer: adminKeypair.publicKey.toString(),
-      owner: walletPublicKey
-    });
-
-    console.log("Sending burn transaction (admin signed)...");
-    const burnResponse = await sendTransaction(client, burnTxResponse, [adminKeypair]);
-    
-    if (burnResponse.status !== "Success") {
-      throw new Error(`Burn transaction failed: ${burnResponse.error || 'Unknown error'}`);
-    }
-
-    // 2. Mint Character - ADMIN SIGNS
-    const { createAssembleCharacterTransaction: mintTxResponse } =
-      await client.createAssembleCharacterTransaction({
-        project: PROJECT_ADDRESS,
-        assemblerConfig: ASSEMBLER_CONFIG_ADDRESS,
+      // 1. Burn 30 CHK (60%) - ADMIN SIGNS
+      const { createBurnResourceTransaction: burnTxResponse } = await client.createBurnResourceTransaction({
         authority: PROJECT_AUTHORITY,
-        characterModel: characterModelAddress,
-        owner: walletPublicKey,
-        payer: PROJECT_AUTHORITY,
-        attributes: generated,
+        resource: CHAKRA_RESOURCE_ADDRESS,
+        amount: BURN_AMOUNT.toString(),
+        payer: adminKeypair.publicKey.toString(),
+        owner: walletPublicKey
       });
 
-    console.log("Sending mint transaction (admin signed)...");
-    const mintResponse = await sendTransaction(client, mintTxResponse, [adminKeypair]);
-
-    if (mintResponse.status !== "Success") {
-      throw new Error(`Mint transaction failed: ${mintResponse.error || 'Unknown error'}`);
-    }
-
-    console.log("Burn + Mint completed successfully!");
-
-    return NextResponse.json({
-      success: true,
-      transactionResult: mintResponse,
-      characterId: id,
-      characterModelAddress,
-      treeAddress: matchedCharacter.treeAdress,
-      attributes: generated,
-      payment: {
-        total: CHARACTER_PRICE,
-        burnt: BURN_AMOUNT,
-        treasury: TREASURY_AMOUNT,
+      console.log("Sending burn transaction (admin signed)...");
+      const burnResponse = await sendTransaction(client, burnTxResponse, [adminKeypair]);
+      
+      if (burnResponse.status !== "Success") {
+        throw new Error(`Burn transaction failed: ${burnResponse.error || 'Unknown error'}`);
       }
-    });
+
+      // 2. Mint Character - ADMIN SIGNS
+      const { createAssembleCharacterTransaction: mintTxResponse } =
+        await client.createAssembleCharacterTransaction({
+          project: PROJECT_ADDRESS,
+          assemblerConfig: ASSEMBLER_CONFIG_ADDRESS,
+          authority: PROJECT_AUTHORITY,
+          characterModel: characterModelAddress,
+          owner: walletPublicKey,
+          payer: PROJECT_AUTHORITY,
+          attributes: generated,
+        });
+
+      console.log("Sending mint transaction (admin signed)...");
+      const mintResponse = await sendTransaction(client, mintTxResponse, [adminKeypair]);
+
+      if (mintResponse.status !== "Success") {
+        throw new Error(`Mint transaction failed: ${mintResponse.error || 'Unknown error'}`);
+      }
+
+      console.log("Burn + Mint completed successfully!");
+
+      return NextResponse.json({
+        success: true,
+        transactionResult: mintResponse,
+        characterId: id,
+        characterModelAddress,
+        treeAddress: matchedCharacter.treeAdress,
+        attributes: generated,
+        payment: {
+          total: CHARACTER_PRICE,
+          burnt: BURN_AMOUNT,
+          treasury: TREASURY_AMOUNT,
+        }
+      });
+    } 
+    // FREE MINT: For new users from /mint-character page
+    else {
+      console.log("FREE MINT: Creating character for new user (no payment required)");
+
+      // Mint Character - ADMIN SIGNS (no burn, no payment)
+      const { createAssembleCharacterTransaction: mintTxResponse } =
+        await client.createAssembleCharacterTransaction({
+          project: PROJECT_ADDRESS,
+          assemblerConfig: ASSEMBLER_CONFIG_ADDRESS,
+          authority: PROJECT_AUTHORITY,
+          characterModel: characterModelAddress,
+          owner: walletPublicKey,
+          payer: PROJECT_AUTHORITY,
+          attributes: generated,
+        });
+
+      console.log("Sending free mint transaction (admin signed)...");
+      const mintResponse = await sendTransaction(client, mintTxResponse, [adminKeypair]);
+
+      if (mintResponse.status !== "Success") {
+        throw new Error(`Mint transaction failed: ${mintResponse.error || 'Unknown error'}`);
+      }
+
+      console.log("Free mint completed successfully!");
+
+      return NextResponse.json({
+        success: true,
+        transactionResult: mintResponse,
+        characterId: id,
+        characterModelAddress,
+        treeAddress: matchedCharacter.treeAdress,
+        attributes: generated,
+        isFree: true,
+      });
+    }
 
   } catch (error) {
     console.error("Mint character error:", error);

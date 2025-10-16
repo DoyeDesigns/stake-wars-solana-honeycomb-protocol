@@ -37,6 +37,7 @@ export default function MintCharacter() {
   >(null);
   const [chakraBalance, setChakraBalance] = useState<number | null>(null);
   const [characterAbilities, setCharacterAbilities] = useState<Character[]>([]);
+  const [mintSuccessful, setMintSuccessful] = useState(false);
   const router = useRouter();
 
   function getCharacterId(attributes: Record<string, string>) {
@@ -63,6 +64,7 @@ export default function MintCharacter() {
       setNewCharacterModelAddress(null);
       setChakraBalance(null);
       setCharacterAbilities([]);
+      setMintSuccessful(false);
     }
   }, [wallet.connected, wallet.disconnecting]);
 
@@ -173,12 +175,16 @@ export default function MintCharacter() {
 
       if (mintData.transactionResult && mintData.transactionResult.status === "Success") {
         toast.success("Character minted successfully!");
+        setMintSuccessful(true);
 
         const characters = await findCharacters();
         setCharacterLengthAfterMint(characters.length);
 
         const lastCharacter = characters[characters.length - 1];
         setNewCharacter(lastCharacter);
+        
+        // Also refresh the user's character list
+        await fetchUserCharacters();
       } else {
         toast.error("Minting failed. Please try again.");
       }
@@ -199,7 +205,10 @@ export default function MintCharacter() {
       holders: [wallet.publicKey?.toString() as string],
       trees: [CHAKRA_RESOURCE_TREE_ADDRESS],
     });
-    setChakraBalance(Number(resources.holdings[0]?.balance));
+    
+    // Set to 0 if no holdings found, otherwise use the balance
+    const balance = resources.holdings[0]?.balance;
+    setChakraBalance(balance ? Number(balance) : 0);
   };
 
 
@@ -215,8 +224,8 @@ export default function MintCharacter() {
         />
         <h1 className="font-bold text-2xl -mt-4 mb-1">Mint your Character</h1>
         
-        {/* Chakra Balance Display */}
-        {wallet.connected && chakraBalance !== null && (
+        {/* Chakra Balance Display - Only show if user has CHAKRA */}
+        {wallet.connected && chakraBalance !== null && chakraBalance > 0 && (
           <div className="flex items-center gap-2 mt-4 bg-[#313030] px-4 py-2 rounded-lg border border-[#E3DEDE]">
             <img src="/chakra_coin.svg" alt="chakra" width={20} height={20} />
             <span className="text-white font-bold">Balance: {chakraBalance} CHK</span>
@@ -224,8 +233,8 @@ export default function MintCharacter() {
         )}
       </div>
 
-      {(characterLengthAfterMint ?? 0) > (characterLengthBeforeMint ?? 0) &&
-      newCharacter ? (
+      {(mintSuccessful || ((characterLengthAfterMint ?? 0) > (characterLengthBeforeMint ?? 0))) &&
+      (newCharacter || characterAbility) ? (
         <div className="flex flex-col gap-5 justify-center items-center mt-[65px] pb-10">
           <div className="bg-[#313030] px-8 flex items-center rounded-xl border-[#E3DEDE] border-[0.75px] w-[540px] h-[250px]">
             <div className="w-[135px] h-50 bg-[#1a1a1a] border-4 border-black rounded-md flex items-center justify-center overflow-hidden">
@@ -274,43 +283,74 @@ export default function MintCharacter() {
         <div className="flex flex-col justify-center items-center mt-[65px]">
           {/* Existing Characters Section - Show if user already has a character */}
           {wallet.connected && characterAbilities.length > 0 ? (
-            <div className="mb-8 w-full max-w-4xl px-4">
+            <div className="mb-8 w-full max-w-6xl px-4">
               {/* Warning Message */}
               <div className="bg-yellow-900/30 border-2 border-yellow-500/50 rounded-xl p-6 mb-6 text-center">
                 <h2 className="text-2xl font-bold text-yellow-400 mb-3">
-                  ⚠️ Character Already Minted
+                  ⚠️ {characterAbilities.length === 1 ? 'Character Already Minted' : 'Characters Already Owned'}
                 </h2>
                 <p className="text-gray-300 text-lg mb-2">
-                  You already have a character! Minting is only available for new players.
+                  {characterAbilities.length === 1 
+                    ? 'You already have a character! Free minting is only available for new players.'
+                    : `You own ${characterAbilities.length} characters! To get more characters, visit the Marketplace.`
+                  }
                 </p>
                 <p className="text-gray-400 text-sm">
-                  Each player can only mint one character to maintain game balance.
+                  New players get one free character. Additional characters can be purchased in the Marketplace.
                 </p>
               </div>
 
-              {/* Display Existing Character */}
-              <h2 className="text-2xl font-bold text-white mb-4 text-center">Your Character</h2>
-              <div className="flex justify-center">
-                <div className="bg-[#313030] p-6 rounded-xl border-2 border-purple-500/50 max-w-md w-full">
-                  <div className="flex items-center gap-4 mb-4">
-                    <div className="w-24 h-24 bg-[#1a1a1a] border-4 border-black rounded-md flex items-center justify-center overflow-hidden">
-                      <img
-                        src={`/characters/${characterAbilities[0].id}.png`}
-                        alt={characterAbilities[0].nickname}
-                        className="w-full h-full object-cover"
-                      />
+              {/* Display All Characters */}
+              <h2 className="text-2xl font-bold text-white mb-6 text-center">
+                Your Character{characterAbilities.length > 1 ? 's' : ''}
+              </h2>
+              
+              {/* Character Grid */}
+              <div className={`grid gap-6 ${
+                characterAbilities.length === 1 
+                  ? 'grid-cols-1 max-w-md mx-auto' 
+                  : characterAbilities.length === 2
+                    ? 'grid-cols-1 sm:grid-cols-2 max-w-4xl mx-auto'
+                    : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
+              }`}>
+                {characterAbilities.map((character, index) => (
+                  <div 
+                    key={character.id} 
+                    className="bg-[#313030] p-6 rounded-xl border-2 border-purple-500/50 hover:border-purple-400/70 transition-all hover:shadow-lg hover:shadow-purple-500/20"
+                  >
+                    {/* Character Header with Number Badge */}
+                    {characterAbilities.length > 1 && (
+                      <div className="flex justify-between items-center mb-3">
+                        <span className="text-purple-400 text-xs font-bold">CHARACTER #{index + 1}</span>
+                        <span className="bg-purple-600 text-white text-xs px-2 py-1 rounded-full">
+                          {character.village.split(' ')[1]}
+                        </span>
+                      </div>
+                    )}
+                    
+                    {/* Character Image and Info */}
+                    <div className="flex items-center gap-4 mb-4">
+                      <div className="w-24 h-24 bg-[#1a1a1a] border-4 border-black rounded-md flex items-center justify-center overflow-hidden flex-shrink-0">
+                        <img
+                          src={`/characters/${character.id}.png`}
+                          alt={character.nickname}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-bold text-white text-xl truncate">{character.nickname}</h3>
+                        <p className="text-sm text-purple-400 truncate">{character.village}</p>
+                        <p className="text-sm text-gray-300 truncate">{character.specialty}</p>
+                      </div>
                     </div>
-                    <div>
-                      <h3 className="font-bold text-white text-xl">{characterAbilities[0].nickname}</h3>
-                      <p className="text-sm text-purple-400">{characterAbilities[0].village}</p>
-                      <p className="text-sm text-gray-300">{characterAbilities[0].specialty}</p>
+                    
+                    {/* Character Stats */}
+                    <div className="grid grid-cols-2 gap-3 text-sm text-gray-300 bg-gray-900/50 p-4 rounded-lg">
+                      <p><span className="font-bold text-white">Health:</span> {character.baseHealth}</p>
+                      <p><span className="font-bold text-white">Abilities:</span> {character.abilities.length}</p>
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-3 text-sm text-gray-300 bg-gray-900/50 p-4 rounded-lg">
-                    <p><span className="font-bold text-white">Health:</span> {characterAbilities[0].baseHealth}</p>
-                    <p><span className="font-bold text-white">Abilities:</span> {characterAbilities[0].abilities.length}</p>
-                  </div>
-                </div>
+                ))}
               </div>
 
               {/* Action Buttons */}

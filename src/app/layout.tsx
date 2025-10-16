@@ -6,6 +6,7 @@ import { ToastContainer } from 'react-toastify';
 import NavBar from "@/components/NavBar";
 import Footer from "@/components/Footer";
 import Marketplace from "@/components/Marketplace";
+import OnboardingDialog from "@/components/OnboardingDialog";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -50,6 +51,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <SolanaWalletProvider>
+          <OnboardingDialog />
           <div className="min-h-screen bg-[url('/grid-lines.png')] bg-cover bg-center relative">
             <div className="min-h-screen bg-[url('/bg-gradient.png')] bg-cover bg-center">
               <NavBar />

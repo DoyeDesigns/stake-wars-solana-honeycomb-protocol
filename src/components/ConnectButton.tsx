@@ -12,6 +12,7 @@ import base58 from "bs58";
 import { useUserStore } from "@/store/useUser";
 import { useAuthStore } from "@/store/useAuth";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
+import WalletButton from "./WalletButton";
 
 type ConnectButtonProps = {
   width: string;
@@ -26,67 +27,86 @@ export const compactHash = (hash: string | null | undefined) => {
 
 export default function ConnectButton({ width }: ConnectButtonProps) {
   const wallet = useWallet();
-  const { user, setUser, updateUser } = useUserStore();
+  const { user: globalUser, setUser, updateUser } = useUserStore();
   const { setAccessToken: setGlobalAccessToken } = useAuthStore();
 
   const [localAccessToken, setLocalAccessToken] = useState<string | null>(null);
   const [hasProfile, setHasProfile] = useState<boolean>(false);
   const [loading, setLoading] = useState(false);
+  const [checkingProfile, setCheckingProfile] = useState(false);
+  const [localUser, setLocalUser] = useState<User | null>(null);
+  
+  // Use local user if available, otherwise fall back to global user
+  const user = localUser || globalUser;
 
   useEffect(() => {
-    const fetchUser = async () => {
-      if (!wallet.publicKey) return;
+    const fetchUserAndProfile = async () => {
+      if (!wallet.publicKey) {
+        // Reset state when wallet disconnects
+        setLocalUser(null);
+        setUser(null);
+        setHasProfile(false);
+        setLocalAccessToken(null);
+        setCheckingProfile(false);
+        return;
+      }
 
       try {
-        const { user } = await client.findUsers({
+        setCheckingProfile(true);
+        
+        const { user: fetchedUsers } = await client.findUsers({
           wallets: [wallet.publicKey.toString()],
           includeProof: true,
         });
 
-        if (user && user.length > 0) {
-          setUser(user[0] as unknown as User);
+        if (fetchedUsers && fetchedUsers.length > 0) {
+          const foundUser = fetchedUsers[0] as unknown as User;
+          
+          setLocalUser(foundUser);
+          setUser(foundUser);
+          
+          try {
+            const { profile } = await client.findProfiles({
+              userIds: [foundUser.id],
+              projects: [PROJECT_ADDRESS],
+              includeProof: true,
+            });
+
+            if (profile && profile.length > 0) {
+              setHasProfile(true);
+              const userWithProfiles = { ...foundUser, profiles: profile };
+              setLocalUser(userWithProfiles as User);
+              updateUser({ profiles: profile });
+            } else {
+              setHasProfile(false);
+            }
+          } catch (profileError) {
+            setHasProfile(false);
+          }
         } else {
+          setLocalUser(null);
           setUser(null);
+          setHasProfile(false);
         }
       } catch (error) {
-        toast.error(`Error fetching user: ${error}`);
+        setLocalUser(null);
         setUser(null);
+        setHasProfile(false);
+      } finally {
+        setCheckingProfile(false);
       }
     };
 
-    fetchUser();
-  }, [wallet.publicKey?.toString()]); 
+    fetchUserAndProfile();
+  }, [wallet.publicKey?.toString(), wallet.connected]); 
 
+// Note: Profile checking is now done in the main fetchUserAndProfile effect above
+// This effect is kept minimal for backward compatibility
 useEffect(() => {
-  const checkIfUserHasProfile = async () => {
-    if (!user || !user.id) return;
-
-    // Skip if user already has profiles loaded
-    if (user.profiles && user.profiles.length > 0) {
-      setHasProfile(true);
-      return;
-    }
-
-    try {
-      const { profile } = await client.findProfiles({
-        userIds: [user.id],
-        projects: [PROJECT_ADDRESS],
-        includeProof: true,
-      });
-
-      if (profile && profile.length > 0) {
-        updateUser({ profiles: profile });
-        setHasProfile(true);
-      } else {
-        setHasProfile(false);
-      }
-    } catch (err) {
-      toast.error(`Error checking for profile: ${err}`);
-    }
-  };
-
-  checkIfUserHasProfile();
-}, [user?.id]); // Only depend on user.id, not the entire user object
+  if (user && user.profiles && user.profiles.length > 0) {
+    setHasProfile(true);
+  }
+}, [user]);
 
 const authenticateWithEdgeClient = async () => {
   if (!wallet.publicKey) {
@@ -277,51 +297,52 @@ const authenticateWithEdgeClient = async () => {
   };
 
   return (
-    <div>
+    <div className={`${width} flex`}>
       {!wallet.connected ? (
-  // 1. Connect Wallet
-  // <Button
-  //   className={`text-white border border-white connect-button-bg min-h-[42px] font-semibold ${width} rounded-[7px]`}
-  //   onClick={() => wallet.connect()}
-  // >
-  //   Connect Wallet
-  // </Button>
-  <WalletMultiButton />
-) : wallet.connected && !user ? (
-  // 2. Create User
+  // 1. Not Connected - Show WalletMultiButton
+  <div className="w-full">
+    <WalletMultiButton style={{ width: '100%', maxWidth: 'none' }} className="!w-full" />
+  </div>
+) : checkingProfile ? (
+  // 2. Checking user/profile status - Show loading
+  <Button
+    className="text-white border border-white connect-button-bg min-h-[42px] font-semibold w-full rounded-[7px]"
+    disabled
+  >
+    Checking...
+  </Button>
+) : !user ? (
+  // 3. Connected but No User - Create User
   <Button
     onClick={createUserAndProfile}
-    className={`text-white border border-white connect-button-bg min-h-[42px] font-semibold ${width} rounded-[7px]`}
+    className="text-white border border-white connect-button-bg min-h-[42px] font-semibold w-full rounded-[7px]"
     disabled={loading}
   >
     {loading ? "Creating..." : "Create User"}
   </Button>
-) : wallet.connected && user && !hasProfile && !localAccessToken ? (
-  // 3. Authenticate (only if no profile and no token)
+) : user && hasProfile ? (
+  // 4. Has User & Profile - Show Custom WalletButton with dropdown
+  <WalletButton className="w-full" />
+) : user && !hasProfile && !localAccessToken ? (
+  // 5. Has User but No Profile, No Token - Authenticate
   <Button
     onClick={authenticateWithEdgeClient}
-    className={`text-white border border-white connect-button-bg min-h-[42px] font-semibold ${width} rounded-[7px]`}
+    className="text-white border border-white connect-button-bg min-h-[42px] font-semibold w-full rounded-[7px]"
   >
     Authenticate
   </Button>
-) : wallet.connected && user && !hasProfile && localAccessToken ? (
-  // 4. Create Profile after auth
+) : user && !hasProfile && localAccessToken ? (
+  // 6. Has User but No Profile, Has Token - Create Profile
   <Button
     onClick={createProfile}
-    className={`text-white border border-white connect-button-bg min-h-[42px] font-semibold ${width} rounded-[7px]`}
+    className="text-white border border-white connect-button-bg min-h-[42px] font-semibold w-full rounded-[7px]"
     disabled={loading}
   >
     {loading ? "Creating..." : "Create Profile"}
   </Button>
 ) : (
-  // 5. Everything ready — Show address
-  // <Button
-  //   className="text-white border border-white connect-button-bg min-h-[42px] w-full lg:w-[145px] rounded-[7px]"
-  //   onClick={() => wallet.}
-  // >
-  //   {compactAddress}
-  // </Button>
-  <WalletMultiButton />
+  // 7. Fallback - Show Custom WalletButton
+  <WalletButton className="w-full" />
 )}
     </div>
   );

@@ -213,6 +213,7 @@ export default function Marketplace() {
               walletPublicKey: wallet.publicKey.toString(),
               characterAddresses: characterAdressess,
               characterId: characterId,
+              isPurchase: true, // Indicate this is a paid purchase from marketplace
             }),
           });
 
@@ -359,6 +360,8 @@ export default function Marketplace() {
                 {CHARACTERS.map((character, index) => {
                   const isOwned = ownedCharacterIds.includes(character.id);
                   const isPurchasing = purchasingCharacterId === character.id;
+                  const hasEnoughChakra = ((chakraBalance as number) ?? 0) >= CHARACTER_PRICE;
+                  const canPurchase = !isOwned && purchasingCharacterId === null && hasEnoughChakra;
                   
                   return (
                     <div
@@ -366,13 +369,22 @@ export default function Marketplace() {
                       className={`rounded-[10px] flex flex-col items-center justify-between p-5 bg-[#00000040] max-w-60 border-2 transition-all relative ${
                         isOwned 
                           ? 'border-green-500/50 opacity-50' 
-                          : 'border-purple-500/30 hover:border-purple-500'
+                          : !hasEnoughChakra
+                            ? 'border-red-500/30 opacity-60'
+                            : 'border-purple-500/30 hover:border-purple-500'
                       }`}
                     >
                       {/* Owned Badge */}
                       {isOwned && (
                         <div className="absolute top-2 right-2 bg-green-600 text-white text-xs font-bold px-2 py-1 rounded-full z-10">
                           OWNED
+                        </div>
+                      )}
+
+                      {/* Insufficient Funds Badge */}
+                      {!isOwned && !hasEnoughChakra && (
+                        <div className="absolute top-2 right-2 bg-red-600 text-white text-xs font-bold px-2 py-1 rounded-full z-10">
+                          INSUFFICIENT CHAKRA
                         </div>
                       )}
 
@@ -398,33 +410,42 @@ export default function Marketplace() {
                         </div>
                       </div>
 
-                      <Button
-                        disabled={isOwned || purchasingCharacterId !== null || ((chakraBalance as number) ?? 0) < CHARACTER_PRICE}
-                        onClick={() => purchaseCharacter(character.id, character.nickname)}
-                        className="flex cursor-pointer w-full bg-purple-600 hover:bg-purple-700 items-center border-[0.6px] rounded-lg border-[#FFFFFF] gap-2 justify-center disabled:bg-gray-600 disabled:cursor-not-allowed"
-                      >
-                        {isPurchasing ? (
-                          <span className="text-sm flex items-center gap-2">
-                            <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
-                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                            Processing...
-                          </span>
-                        ) : isOwned ? (
-                          <span className="text-sm">Already Owned</span>
-                        ) : (
-                          <>
-                            <img
-                              src="/chakra_coin.svg"
-                              alt="chakra"
-                              width={20}
-                              height={20}
-                            />
-                            {CHARACTER_PRICE} CHK
-                          </>
+                      <div className="w-full space-y-2">
+                        <Button
+                          disabled={!canPurchase}
+                          onClick={() => purchaseCharacter(character.id, character.nickname)}
+                          className="flex cursor-pointer w-full bg-purple-600 hover:bg-purple-700 items-center border-[0.6px] rounded-lg border-[#FFFFFF] gap-2 justify-center disabled:bg-gray-600 disabled:cursor-not-allowed"
+                        >
+                          {isPurchasing ? (
+                            <span className="text-sm flex items-center gap-2">
+                              <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                              </svg>
+                              Processing...
+                            </span>
+                          ) : isOwned ? (
+                            <span className="text-sm">Already Owned</span>
+                          ) : (
+                            <>
+                              <img
+                                src="/chakra_coin.svg"
+                                alt="chakra"
+                                width={20}
+                                height={20}
+                              />
+                              {CHARACTER_PRICE} CHK
+                            </>
+                          )}
+                        </Button>
+
+                        {/* Insufficient Balance Warning */}
+                        {!isOwned && !hasEnoughChakra && chakraBalance !== null && (
+                          <div className="text-xs text-red-400 text-center">
+                            Need {CHARACTER_PRICE - ((chakraBalance as number) || 0)} more CHK
+                          </div>
                         )}
-                      </Button>
+                      </div>
                     </div>
                   );
                 })}
