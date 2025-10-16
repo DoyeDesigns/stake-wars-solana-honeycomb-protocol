@@ -217,8 +217,11 @@ const UserGameRooms = ({setIsOpen} : GameRoomSearchProps) => {
             <div className="grid lg:grid-cols-2 gap-2 text-[12px] lg:text-[14px]">
               <div className="flex justify-between gap-1 lg:justify-start">
                 <strong>Room ID:</strong>
-                <span className="text-[#BFE528] text-right lg:text-left">
-                  {gameRoom.id}
+                <span className="text-[#BFE528] text-right lg:text-left truncate max-w-[150px] sm:max-w-none" title={gameRoom.id}>
+                  {gameRoom.id.length > 20 
+                    ? `${gameRoom.id.slice(0, 10)}...${gameRoom.id.slice(-6)}`
+                    : gameRoom.id
+                  }
                 </span>
               </div>
               <div className="truncate flex justify-between gap-1 lg:justify-start">

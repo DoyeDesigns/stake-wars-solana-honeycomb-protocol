@@ -56,6 +56,7 @@ export default function NavBar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [showWalletSelector, setShowWalletSelector] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   // Filter links based on auth status
@@ -209,6 +210,28 @@ export default function NavBar() {
                   <div className="px-4 py-2">
                     {wallet.connected && wallet.publicKey ? (
                       <>
+                        {/* User Profile Button - Mobile Only */}
+                        <div className="mb-3 lg:hidden">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setMenuOpen(false); // Close dropdown first
+                              setTimeout(() => {
+                                setProfileOpen(true); // Open profile after dropdown closes
+                              }, 200);
+                            }}
+                            className="w-full flex items-center justify-center gap-3 bg-gray-800/50 p-3 rounded-lg border border-purple-500/30 cursor-pointer hover:bg-gray-800 transition-colors"
+                          >
+                            <div className="w-[43px] h-[43px] rounded-full bg-gray-700 flex items-center justify-center overflow-hidden">
+                              <img src="/avater.png" alt="avatar" className="w-full h-full object-cover" />
+                            </div>
+                            <span className="text-white font-semibold text-sm">View Profile</span>
+                          </button>
+                        </div>
+
+                        {/* Separator - Mobile Only */}
+                        <div className="border-t border-purple-500/20 my-2 lg:hidden"></div>
+                        
                         {/* Connected Wallet Display */}
                         <div className="mb-2">
                           <div className="text-gray-400 text-xs mb-1">Connected Wallet</div>
@@ -303,6 +326,13 @@ export default function NavBar() {
           </div>
         </div>
       </div>
+
+      {/* Controlled UserProfile for Mobile - Outside dropdown */}
+      {profileOpen && (
+        <div className="lg:hidden">
+          <UserProfile isOpen={profileOpen} setIsOpen={setProfileOpen} />
+        </div>
+      )}
     </div>
   );
 }
