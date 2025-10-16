@@ -162,8 +162,8 @@ export default function Marketplace() {
         // STEP 1: User payment (CLIENT-SIDE)
         toast.info("💸 Processing payment...");
         
-        // Payment breakdown: 60% burnt (30 CHK) + 40% treasury (20 CHK)
-        const TREASURY_AMOUNT = 20;
+        // Payment breakdown: 60% burnt (600 CHK) + 40% treasury (400 CHK)
+        const TREASURY_AMOUNT = 400;
 
         console.log("Creating payment transaction on client...", {
           TREASURY_ADDRESS,
@@ -245,7 +245,7 @@ export default function Marketplace() {
 
 
   const isInGameplay = pathname === `/game-play/${roomId}`;
-  const CHARACTER_PRICE = 50;
+  const CHARACTER_PRICE = 1000;
 
   return (
     <div className={`fixed ${isInGameplay ? 'bottom-[137px] left-5' : 'bottom-8 left-8'}`}>

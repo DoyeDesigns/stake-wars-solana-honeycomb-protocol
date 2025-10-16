@@ -14,12 +14,12 @@ const adminKeypair = Keypair.fromSecretKey(
 );
 
 // Character pricing breakdown
-const CHARACTER_PRICE = 50;
+const CHARACTER_PRICE = 1000;
 const BURN_PERCENTAGE = 0.60; // 60%
 const TREASURY_PERCENTAGE = 0.40; // 40%
 
-const BURN_AMOUNT = Math.floor(CHARACTER_PRICE * BURN_PERCENTAGE); // 30 CHK
-const TREASURY_AMOUNT = Math.floor(CHARACTER_PRICE * TREASURY_PERCENTAGE); // 20 CHK
+const BURN_AMOUNT = Math.floor(CHARACTER_PRICE * BURN_PERCENTAGE); // 600 CHK
+const TREASURY_AMOUNT = Math.floor(CHARACTER_PRICE * TREASURY_PERCENTAGE); // 400 CHK
 
 const traitUri =
   "https://lh3.googleusercontent.com/-Jsm7S8BHy4nOzrw2f5AryUgp9Fym2buUOkkxgNplGCddTkiKBXPLRytTMXBXwGcHuRr06EvJStmkHj-9JeTfmHsnT0prHg5Mhg";

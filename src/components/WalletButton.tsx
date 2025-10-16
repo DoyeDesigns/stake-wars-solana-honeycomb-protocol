@@ -55,7 +55,7 @@ export default function WalletButton({ className = '' }: WalletButtonProps) {
   // Handle wallet selection
   const handleSelectWallet = async (walletName: string) => {
     try {
-      wallet.select(walletName);
+      wallet.select(walletName as any);
       await wallet.connect();
       setShowWalletSelector(false);
       setIsOpen(false);
