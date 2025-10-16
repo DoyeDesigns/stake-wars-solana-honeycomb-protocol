@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { Button } from '@/components/ui/button';
@@ -24,11 +24,11 @@ export default function TransferPage() {
   const [balance, setBalance] = useState<number | null>(null);
 
   // Fetch CHAKRA balance
-  const fetchBalance = async (showLoading = false) => {
+  const fetchBalance = useCallback(async (showLoading = false) => {
     if (!wallet.publicKey) return;
     
     if (showLoading) setRefreshing(true);
-    
+
     try {
       const resources = await client.findHoldings({
         holders: [wallet.publicKey.toString()],
@@ -47,14 +47,14 @@ export default function TransferPage() {
     } finally {
       if (showLoading) setRefreshing(false);
     }
-  };
+  }, [wallet.publicKey]);
 
   // Fetch balance on mount and wallet change
   useEffect(() => {
     if (wallet.connected) {
       fetchBalance();
     }
-  }, [wallet.connected, wallet.publicKey]);
+  }, [wallet.connected, fetchBalance]);
 
   const handleTransfer = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,7 +67,7 @@ export default function TransferPage() {
     // Validate recipient address
     try {
       new PublicKey(recipient);
-    } catch (error) {
+    } catch {
       toast.error('Invalid recipient address');
       return;
     }

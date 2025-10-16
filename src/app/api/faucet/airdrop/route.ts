@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
     let publicKey: PublicKey;
     try {
       publicKey = new PublicKey(walletAddress);
-    } catch (error) {
+    } catch {
       return NextResponse.json(
         { error: "Invalid wallet address" },
         { status: 400 }

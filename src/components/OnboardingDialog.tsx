@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useRouter, usePathname } from 'next/navigation';
 import { client } from '@/utils/constants/client';
@@ -31,7 +31,7 @@ export default function OnboardingDialog() {
   const totalSteps = 3;
   const isOnboardingComplete = hasSOL && hasProfile && hasCharacter;
 
-  const checkUserStatus = async () => {
+  const checkUserStatus = useCallback(async () => {
     if (!wallet.publicKey || !wallet.connected) {
       setIsOpen(false);
       return;
@@ -64,7 +64,7 @@ export default function OnboardingDialog() {
             includeProof: true,
           });
           userHasProfile = profile && profile.length > 0;
-        } catch (profileError) {
+        } catch {
           userHasProfile = false;
         }
       }
@@ -111,12 +111,12 @@ export default function OnboardingDialog() {
       const shouldShow = balanceSOL === 0 || !userHasProfile || !userHasCharacter;
       setIsOpen(shouldShow);
 
-    } catch (error) {
+    } catch {
       // Silent error handling
     } finally {
       setChecking(false);
     }
-  };
+  }, [wallet.publicKey, wallet.connected, pathname, user]);
 
   // Mark when on task pages
   useEffect(() => {
@@ -163,7 +163,7 @@ export default function OnboardingDialog() {
       const interval = setInterval(checkUserStatus, 60000);
       return () => clearInterval(interval);
     }
-  }, [pathname, user]);
+  }, [pathname, user, checkUserStatus, wallet.connected, wallet.publicKey]);
 
   if (!wallet.connected) return null;
 
@@ -256,7 +256,7 @@ export default function OnboardingDialog() {
                 <p className="text-gray-400 text-sm mb-3">
                   {hasSOL 
                     ? `You have ${solBalance.toFixed(4)} SOL for transaction fees` 
-                    : 'You need SOL to create your account and perform any transactions on Honeycomb'
+                    : "You need SOL to create your account and perform any transactions on Honeycomb"
                   }
                 </p>
                 
@@ -311,17 +311,17 @@ export default function OnboardingDialog() {
                 </h3>
                 <p className="text-gray-400 text-sm mb-3">
                   {hasProfile 
-                    ? 'Your account is ready!' 
+                    ? "Your account is ready!" 
                     : hasSOL
-                      ? 'Click the Connect button in the navigation bar to create your user and profile'
-                      : 'Get SOL first before creating your account'
+                      ? "Click the Connect button in the navigation bar to create your user and profile"
+                      : "Get SOL first before creating your account"
                   }
                 </p>
                 
                 {!hasProfile && hasSOL && (
                   <div className="bg-blue-900/30 border border-blue-500/50 rounded-lg p-3">
                     <p className="text-blue-300 text-xs">
-                      👆 Look for the <span className="font-bold">"Create User"</span> button in the top navigation
+                      👆 Look for the <span className="font-bold">&quot;Create User&quot;</span> button in the top navigation
                     </p>
                   </div>
                 )}
@@ -364,12 +364,12 @@ export default function OnboardingDialog() {
                 </h3>
                 <p className="text-gray-400 text-sm mb-3">
                   {hasCharacter 
-                    ? 'You have a character and can start playing!' 
+                    ? "You have a character and can start playing!" 
                     : hasSOL && hasProfile
-                      ? 'Create your first character to start playing (FREE!)'
+                      ? "Create your first character to start playing (FREE!)"
                       : !hasSOL
-                        ? 'Get SOL and create your account first'
-                        : 'Create your account first'
+                        ? "Get SOL and create your account first"
+                        : "Create your account first"
                   }
                 </p>
                 

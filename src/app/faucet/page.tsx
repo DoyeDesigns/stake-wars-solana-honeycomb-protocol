@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { Button } from '@/components/ui/button';
@@ -19,7 +19,7 @@ export default function FaucetPage() {
   const [balance, setBalance] = useState<number | null>(null);
 
   // Fetch SOL balance
-  const fetchBalance = async () => {
+  const fetchBalance = useCallback(async () => {
     if (!wallet.publicKey) return;
     
     try {
@@ -30,14 +30,14 @@ export default function FaucetPage() {
     } catch (error) {
       console.error('Failed to fetch balance:', error);
     }
-  };
+  }, [wallet.publicKey]);
 
   // Fetch balance on mount and wallet change
   useEffect(() => {
     if (wallet.connected) {
       fetchBalance();
     }
-  }, [wallet.connected, wallet.publicKey]);
+  }, [wallet.connected, fetchBalance]);
 
   const handleAirdrop = async () => {
     if (!wallet.publicKey) {
@@ -222,7 +222,7 @@ export default function FaucetPage() {
            {balance !== null && balance <= MAX_BALANCE_FOR_FAUCET && (
              <div className="mt-4 p-4 bg-green-500/10 border border-green-500/30 rounded-lg">
                <p className="text-green-300 text-sm text-center">
-                 ✅ You're eligible! Click above to get {AIRDROP_AMOUNT} SOL
+                 ✅ You&apos;re eligible! Click above to get {AIRDROP_AMOUNT} SOL
                </p>
              </div>
            )}
@@ -234,8 +234,8 @@ export default function FaucetPage() {
           <ul className="space-y-2 text-gray-300 text-sm">
             <li>• <strong>Honeycomb SOL</strong> is used to pay for transaction fees in the game</li>
             <li>• You need it to mint characters, transfer CHAKRA, and interact with the blockchain</li>
-            <li>• It's separate from CHAKRA (the in-game currency)</li>
-            <li>• The faucet provides free SOL for testing on Honeycomb's devnet</li>
+            <li>• It&apos;s separate from CHAKRA (the in-game currency)</li>
+            <li>• The faucet provides free SOL for testing on Honeycomb&apos;s devnet</li>
             <li>• <strong>Eligibility:</strong> Only wallets with {MAX_BALANCE_FOR_FAUCET} SOL or less can use the faucet</li>
             <li>• <strong>Amount:</strong> Get {AIRDROP_AMOUNT} SOL per request (no cooldown!)</li>
           </ul>
@@ -258,7 +258,7 @@ export default function FaucetPage() {
           <h2 className="text-xl font-bold text-white mb-3">🔧 How It Works</h2>
           <div className="space-y-3 text-gray-300 text-sm">
             <p>
-              The faucet uses Honeycomb Protocol's devnet RPC to airdrop SOL directly to your wallet:
+              The faucet uses Honeycomb Protocol&apos;s devnet RPC to airdrop SOL directly to your wallet:
             </p>
             <div className="bg-gray-900 p-3 rounded font-mono text-xs">
               solana airdrop {AIRDROP_AMOUNT} {wallet.publicKey?.toString().slice(0, 20)}...

@@ -80,7 +80,7 @@ export default function ConnectButton({ width }: ConnectButtonProps) {
             } else {
               setHasProfile(false);
             }
-          } catch (profileError) {
+          } catch {
             setHasProfile(false);
           }
         } else {
@@ -88,7 +88,7 @@ export default function ConnectButton({ width }: ConnectButtonProps) {
           setUser(null);
           setHasProfile(false);
         }
-      } catch (error) {
+      } catch {
         setLocalUser(null);
         setUser(null);
         setHasProfile(false);
